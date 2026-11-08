@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Apuração Eleitoral 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #090d16;
+            color: #f8fafc;
+        }
+        h1, h2, h3, h4, .font-outfit {
+            font-family: 'Outfit', sans-serif;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            transition: all 0.2s ease;
+        }
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+        ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.4); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248, 0.7); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-black">
+
+    <div id="tela-inicial" class="fixed inset-0 z-[100] flex items-center justify-center p-5 bg-slate-950/95">
+        <div class="glass-panel max-w-2xl w-full rounded-3xl p-8 text-center shadow-2xl">
+            <div class="text-emerald-400 text-5xl mb-4"><i class="fa-solid fa-landmark"></i></div>
+            <p class="text-xs uppercase tracking-[.3em] text-amber-400 font-black">Simulador político</p>
+            <h1 class="font-outfit text-4xl md:text-5xl font-black mt-3">BRASIL ELEIÇÕES</h1>
+            <p class="text-slate-300 mt-3 mb-6">Monte sua própria eleição: escolha os candidatos, números e partidos antes de começar.</p>
+            <h2 class="text-amber-400 font-black uppercase tracking-widest text-sm mb-3">Escolha um modo</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button onclick="selecionarModoEleitoral('presidencial')" class="btn-primary-custom text-black font-black px-5 py-5 rounded-2xl text-base min-h-20"><i class="fa-solid fa-landmark mr-2"></i>Eleições Presidenciais</button>
+                <button onclick="selecionarModoEleitoral('governamental')" class="bg-sky-600 hover:bg-sky-500 text-white font-black px-5 py-5 rounded-2xl text-base min-h-20 border border-sky-400 shadow-lg"><i class="fa-solid fa-map-location-dot mr-2"></i>Eleições Governamentais</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tela-fim-jogo" class="fixed inset-0 z-[130] hidden items-center justify-center bg-slate-950/95 p-4">
+        <div class="glass-panel max-w-xl w-full rounded-3xl p-8 text-center shadow-2xl">
+            <div class="text-amber-400 text-5xl mb-4"><i class="fa-solid fa-flag-checkered"></i></div>
+            <p class="text-xs uppercase tracking-[.3em] text-amber-400 font-black">Fim da simulação</p>
+            <h2 class="font-outfit text-4xl font-black mt-3">20 ELEIÇÕES CONCLUÍDAS</h2>
+            <p class="text-slate-300 mt-3 mb-8">Você chegou ao limite de 20 eleições deste jogo. Inicie uma nova partida para criar outros candidatos.</p>
+            <button onclick="novoJogoDepoisDoLimite()" class="btn-primary-custom text-black font-black px-10 py-4 rounded-2xl text-lg"><i class="fa-solid fa-plus mr-2"></i>INICIAR OUTRO JOGO</button>
+        </div>
+    </div>
+
+    <div id="modal-gerenciar-candidatos" class="fixed inset-0 z-[115] hidden overflow-y-auto bg-slate-950/95 p-4 md:p-8">
+        <div class="max-w-4xl mx-auto glass-panel rounded-3xl p-5 md:p-7">
+            <div class="flex justify-between items-center gap-3 mb-5">
+                <div><p class="text-amber-400 text-xs font-black uppercase tracking-widest">Eleição em andamento</p><h2 class="font-outfit text-2xl font-black">Gerenciar candidatos</h2><p class="text-slate-400 text-sm">Adicione uma candidatura ou retire um candidato desta eleição.</p></div>
+                <button onclick="fecharGerenciadorCandidatos()" class="bg-slate-800 px-4 py-2 rounded-xl font-bold">Fechar</button>
+            </div>
+            <div id="gerenciador-lista-candidatos" class="space-y-2 mb-6"></div>
+            <div class="border-t border-slate-700 pt-5">
+                <h3 class="font-black text-lg mb-3">Adicionar candidato</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input id="novo-cand-nome" maxlength="50" class="bg-slate-950 border border-slate-700 rounded-xl p-3 text-white" placeholder="Nome do candidato">
+                    <input id="novo-cand-num" type="number" min="1" max="99" class="bg-slate-950 border border-slate-700 rounded-xl p-3 text-white" placeholder="Número (1 a 99)">
+                    <select id="novo-cand-partido" class="bg-slate-950 border border-slate-700 rounded-xl p-3 text-white"></select>
+                </div>
+                <button onclick="adicionarCandidatoDuranteJogo()" class="mt-3 bg-emerald-600 hover:bg-emerald-500 px-5 py-3 rounded-xl font-black"><i class="fa-solid fa-user-plus mr-2"></i>Adicionar à eleição</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tela-criar-candidatos" class="fixed inset-0 z-[101] hidden overflow-y-auto bg-slate-950 p-4 md:p-8">
+        <div class="max-w-5xl mx-auto">
+            <div class="flex flex-wrap justify-between items-center gap-3 mb-6">
+                <div><p class="text-amber-400 text-xs font-black uppercase tracking-widest">Novo jogo</p><h2 class="font-outfit text-3xl font-black">Criar candidatos</h2><p class="text-slate-400 text-sm mt-1">Escolha de 2 a 20 candidatos. Cada um precisa de nome, número e partido.</p></div>
+                <button onclick="voltarTelaInicial()" class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-xl font-bold">← Voltar</button>
+            </div>
+            <div id="painel-estado-governamental" class="hidden glass-panel p-4 md:p-5 rounded-2xl mb-5 border border-sky-500/40">
+                <label for="seletor-estado-governamental" class="block text-sky-300 text-xs uppercase tracking-widest font-black mb-2"><i class="fa-solid fa-map-location-dot mr-2"></i>Estado da eleição governamental</label>
+                <select id="seletor-estado-governamental" onchange="atualizarEstadoGovernamental(this.value)" class="w-full bg-slate-950 border border-sky-500/50 rounded-xl p-3 text-white font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"></select>
+                <p id="texto-estado-governamental" class="text-slate-400 text-xs mt-2">Selecione a unidade da Federação onde acontecerá a eleição para governador.</p>
+            </div>
+            <div class="glass-panel p-4 md:p-6 rounded-2xl mb-5 flex flex-wrap items-center justify-between gap-3">
+                <div><span class="text-slate-400 text-xs uppercase font-bold">Quantidade de candidatos</span><div class="text-2xl font-black"><span id="contador-candidatos">2</span><span class="text-slate-500 text-base"> / 20</span></div></div>
+                <button id="btn-adicionar-candidato" onclick="adicionarLinhaCandidato()" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 rounded-xl font-black"><i class="fa-solid fa-user-plus mr-2"></i>Adicionar candidato</button>
+            </div>
+            <div id="lista-criacao-candidatos" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            <div class="mt-6 flex flex-wrap justify-end gap-3 pb-8">
+                <button onclick="voltarTelaInicial()" class="bg-slate-800 hover:bg-slate-700 px-5 py-3 rounded-xl font-bold">Cancelar</button>
+                <button onclick="confirmarCriacaoCandidatos()" class="btn-primary-custom text-black px-8 py-3 rounded-xl font-black"><i class="fa-solid fa-flag-checkered mr-2"></i>Começar eleição</button>
+            </div>
+            <p class="text-xs text-slate-500 pb-6">Os perfis partidários são resumos gerais de linhas programáticas; filiados e candidatos podem divergir, e as posições variam conforme propostas e alianças.</p>
+        </div>
+    </div>
+
+
+    <!-- HEADER / PAINEL DE CONTROLE SUPERIOR -->
+    <header class="glass-panel border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-xl">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <div class="flex items-center gap-3">
+                <div class="bg-amber-500 text-black p-2.5 rounded-xl font-black text-xl shadow-lg">
+                    <i class="fa-solid fa-box-archive"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-black tracking-tight text-white flex items-center gap-2">
+                        <span id="titulo-eleicoes-header">BRASIL ELEIÇÕES</span> <span id="ano-eleicao-header">2026</span> <span id="turno-badge" class="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/40 px-2 py-0.5 rounded-full uppercase">1º Turno</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Eleições: <span id="contador-eleicoes-jogo" class="text-amber-300 font-bold">0/20</span> | Eleitorado: <span class="text-slate-200 font-bold">214.000.000</span> | Apurado: <span id="urnas-porcent" class="text-amber-400 font-bold">0.0%</span></p>
+                </div>
+            </div>
+
+            <!-- CONTROLES CENTRAIS E VELOCIDADE -->
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Seletor de Velocidade -->
+                <div id="velocidade-container" class="flex items-center bg-slate-900 border border-slate-700 p-1 rounded-xl">
+                    <span class="text-xs font-bold text-slate-400 px-2">Vel:</span>
+                    <button onclick="setVelocidade(0.1)" class="vel-btn px-2 py-1 text-xs font-black rounded bg-slate-800 text-white hover:bg-amber-500 hover:text-black">0.1x</button>
+                    <button onclick="setVelocidade(0.5)" class="vel-btn px-2 py-1 text-xs font-black rounded bg-slate-800 text-white hover:bg-amber-500 hover:text-black">0.5x</button>
+                    <button onclick="setVelocidade(1)" class="vel-btn px-2 py-1 text-xs font-black rounded bg-amber-500 text-black">1x</button>
+                    <button onclick="setVelocidade(5)" class="vel-btn px-2 py-1 text-xs font-black rounded bg-slate-800 text-white hover:bg-amber-500 hover:text-black">5x</button>
+                    <button onclick="setVelocidade(20)" class="vel-btn px-2 py-1 text-xs font-black rounded bg-slate-800 text-white hover:bg-amber-500 hover:text-black">Turbo</button>
+                </div>
+
+                <!-- Botões de Ação Dinâmicos -->
+                <button id="btn-acao-principal" onclick="acaoPrincipal()" class="btn-primary-custom text-black font-black px-5 py-2.5 rounded-xl text-sm uppercase tracking-wider flex items-center gap-2 shadow-lg">
+                    <i class="fa-solid fa-play"></i> Simular Semana 1
+                </button>
+
+                <!-- Botão X-Brasil -->
+                <button onclick="abrirModalRedeSocial()" class="bg-sky-600 hover:bg-sky-500 text-white font-black px-4 py-2.5 rounded-xl text-sm uppercase flex items-center gap-2 border border-sky-400 shadow-md transition-all">
+                    <i class="fa-brands fa-x-twitter"></i> X-Brasil <span id="notif-rede" class="bg-red-500 text-white text-[10px] px-1.5 py-0.2 rounded-full hidden">!</span>
+                </button>
+
+                <!-- Botão Mapa do Brasil -->
+                <button onclick="abrirModalMapa()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-4 py-2.5 rounded-xl text-sm uppercase flex items-center gap-2 border border-emerald-400 shadow-md transition-all">
+                    <i class="fa-solid fa-map-location-dot"></i> Mapa UFs
+                </button>
+
+                <button id="btn-gerenciar-candidatos" onclick="abrirGerenciadorCandidatos()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-3 py-2.5 rounded-xl text-sm uppercase flex items-center gap-2 border border-indigo-400 shadow-md">
+                    <i class="fa-solid fa-users-gear"></i> Candidatos
+                </button>
+
+                <!-- Botão Impeachment (visível apenas no mandato) -->
+                <button id="btn-impeachment" onclick="abrirModalImpeachment()" class="hidden bg-red-600 hover:bg-red-500 text-white font-black px-4 py-2.5 rounded-xl text-sm uppercase flex items-center gap-2 border border-red-400 shadow-md animate-pulse">
+                    <i class="fa-solid fa-gavel"></i> Impeachment
+                </button>
+
+                <!-- Reiniciar -->
+                <button onclick="if(confirm('Iniciar a próxima eleição? Isso contará no limite de 20 eleições.')) iniciarNovaEleicao()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-3 py-2.5 rounded-xl text-sm border border-slate-700">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="max-w-7xl mx-auto w-full p-4 flex-1 flex flex-col gap-6 my-4">
+
+        <!-- BANNER DE STATUS DA ETAPA -->
+        <div id="banner-fase" class="glass-panel p-6 rounded-2xl border-l-8 border-amber-500 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <span id="fase-tag" class="text-xs font-black bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full uppercase tracking-wider border border-amber-500/30">Pré-Campanha Eleitoral</span>
+                <h2 id="fase-titulo" class="text-2xl md:text-3xl font-black text-white mt-2">Semana 1 de 5: O Início da Corrida Presidencial</h2>
+                <p id="fase-desc" class="text-sm text-slate-300 mt-1">Os candidatos escolhidos por você oficializaram suas candidaturas e iniciaram suas articulações pelo país.</p>
+            </div>
+            <div id="badge-nota-governo" class="hidden flex flex-col items-center bg-slate-900/90 border-2 border-amber-500 px-6 py-3 rounded-2xl">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Aprovação do Governo</span>
+                <span class="text-3xl font-black text-amber-400 font-mono"><span id="txt-nota-gov">50</span><span class="text-sm text-slate-500">/100</span></span>
+            </div>
+        </div>
+
+        <!-- DOIS TOPS DE CANDIDATOS -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- TOP 1: DISPUTA PRINCIPAL (2 MAIS VOTADOS) -->
+            <div class="glass-card p-6 rounded-2xl border-t-4 border-amber-500 flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-black text-white flex items-center gap-2">
+                            <i class="fa-solid fa-trophy text-amber-400"></i> Top 1: Disputa Direta (2 Principais)
+                        </h3>
+                        <span id="top1-status-label" class="text-xs font-bold text-slate-400 bg-slate-900 px-2 py-1 rounded">Intenção de Voto</span>
+                    </div>
+                    
+                    <div id="container-top-2" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOP 2: CLASSIFICAÇÃO GERAL (TODOS OS 5 CANDIDATOS) -->
+            <div class="glass-card p-6 rounded-2xl border-t-4 border-sky-500 flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-black text-white flex items-center gap-2">
+                            <i class="fa-solid fa-list-ol text-sky-400"></i> Classificação Geral (todos os candidatos)
+                        </h3>
+                        <span class="text-xs font-bold text-slate-400 bg-slate-900 px-2 py-1 rounded">Do 1º ao 5º Colocado</span>
+                    </div>
+
+                    <div id="lista-top-5" class="flex flex-col gap-2.5">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- HISTÓRICO DE ABAS DA PRÉ-CAMPANHA (SEMANAS 1 A 5) -->
+        <div id="secao-historico-semanas" class="glass-card p-6 rounded-2xl">
+            <h3 id="titulo-historico-campanha" class="text-lg font-black text-white mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-calendar-days text-purple-400"></i> Acontecimentos da campanha
+            </h3>
+            <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
+                <button onclick="mudarAbaSemana(1)" id="aba-sem-1" class="px-4 py-2 text-xs font-black rounded-xl bg-amber-500 text-black shadow">1º turno · Sem. 1</button>
+                <button onclick="mudarAbaSemana(2)" id="aba-sem-2" class="px-4 py-2 text-xs font-black rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">1º turno · Sem. 2</button>
+                <button onclick="mudarAbaSemana(3)" id="aba-sem-3" class="px-4 py-2 text-xs font-black rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">1º turno · Sem. 3</button>
+                <button onclick="mudarAbaSemana(4)" id="aba-sem-4" class="px-4 py-2 text-xs font-black rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">1º turno · Sem. 4</button>
+                <button onclick="mudarAbaSemana(5)" id="aba-sem-5" class="px-4 py-2 text-xs font-black rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">1º turno · Sem. 5</button>
+                <button onclick="mudarAbaSemana(6)" id="aba-sem-6" class="px-4 py-2 text-xs font-black rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">2º turno · Sem. 1</button>
+                <button onclick="mudarAbaSemana(7)" id="aba-sem-7" class="px-4 py-2 text-xs font-black rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">2º turno · Sem. 2</button>
+                <button onclick="mudarAbaSemana(8)" id="aba-sem-8" class="px-4 py-2 text-xs font-black rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">2º turno · Sem. 3</button>
+            </div>
+            <div id="conteudo-historico-semana" class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 text-sm text-slate-300 min-h-[90px] flex items-center">
+                Selecione uma semana acima para ver os comícios, carreatas, debates e escândalos ocorridos.
+            </div>
+        </div>
+
+        <div id="secao-historico-mandato" class="glass-card p-4 md:p-5 rounded-2xl hidden">
+            <h3 class="text-lg font-black text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-landmark text-amber-400"></i> Atividades do Presidente</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
+                <section class="min-w-0 bg-slate-950/70 p-3 rounded-xl border border-amber-500/30">
+                    <h4 class="text-sm font-black text-amber-300 mb-2 flex items-center gap-2"><i class="fa-solid fa-chart-line"></i> Decisões e aprovação</h4>
+                    <div id="conteudo-historico-mandato" class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 text-xs text-slate-300 min-h-[110px] max-h-[360px] overflow-y-auto">As decisões do governo aparecerão aqui.</div>
+                </section>
+                <section class="min-w-0 bg-slate-950/70 p-3 rounded-xl border border-sky-500/30">
+                    <h4 class="text-sm font-black text-sky-300 mb-2 flex items-center gap-2"><i class="fa-solid fa-microphone-lines"></i> Discursos do presidente</h4>
+                    <div id="conteudo-historico-discursos" class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 text-xs text-slate-300 min-h-[110px] max-h-[360px] overflow-y-auto">Os discursos aparecerão aqui.</div>
+                </section>
+                <section class="min-w-0 bg-slate-950/70 p-3 rounded-xl border border-emerald-500/30">
+                    <h4 class="text-sm font-black text-emerald-300 mb-2 flex items-center gap-2"><i class="fa-solid fa-scale-balanced"></i> Leis aprovadas</h4>
+                    <div id="conteudo-historico-leis" class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 text-xs text-slate-300 min-h-[110px] max-h-[360px] overflow-y-auto">As leis aprovadas aparecerão aqui.</div>
+                </section>
+            </div>
+        </div>
+
+        <!-- ESTATÍSTICAS DEMOGRÁFICAS E URNAS -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="glass-card p-4 rounded-xl text-center">
+                <span class="text-xs font-bold text-slate-400 block uppercase">Votos Válidos Est.</span>
+                <span id="stat-validos" class="text-xl font-black text-emerald-400 font-mono">--</span>
+            </div>
+            <div class="glass-card p-4 rounded-xl text-center">
+                <span class="text-xs font-bold text-slate-400 block uppercase">Votos Brancos</span>
+                <span id="stat-brancos" class="text-xl font-black text-slate-200 font-mono">--</span>
+            </div>
+            <div class="glass-card p-4 rounded-xl text-center">
+                <span class="text-xs font-bold text-slate-400 block uppercase">Votos Nulos</span>
+                <span id="stat-nulos" class="text-xl font-black text-rose-400 font-mono">--</span>
+            </div>
+            <div class="glass-card p-4 rounded-xl text-center">
+                <span class="text-xs font-bold text-slate-400 block uppercase">Abstenções / Faltas</span>
+                <span id="stat-abst" class="text-xl font-black text-amber-400 font-mono">--</span>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL DO X-BRASIL (REDE SOCIAL) -->
+    <div id="modal-rede-social" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex flex-col p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl flex-1 flex flex-col max-w-3xl w-full mx-auto overflow-hidden shadow-2xl">
+            <div class="p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-brands fa-x-twitter text-xl text-sky-400"></i>
+                    <h3 class="text-lg font-black text-white">X-Brasil (Opinião Pública em Tempo Real)</h3>
+                </div>
+                <button onclick="fecharModalRedeSocial()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1 rounded-xl text-sm font-bold">
+                    <i class="fa-solid fa-xmark"></i> Fechar
+                </button>
+            </div>
+            <div id="feed-tweets" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3 bg-slate-900/50">
+                <!-- Tweets injetados via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DO MAPA DO BRASIL COM DIVISÕES TERRITORIAIS DAS 27 UFs -->
+    <div id="modal-mapa" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex flex-col p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl flex-1 flex flex-col max-w-5xl w-full mx-auto overflow-hidden shadow-2xl">
+            <div class="p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center gap-3">
+                <h3 class="text-lg font-black text-white flex items-center gap-2">
+                    <i class="fa-solid fa-map text-emerald-400"></i> <span id="titulo-modal-mapa">Mapa Eleitoral do Brasil (27 UFs)</span>
+                </h3>
+                <button onclick="fecharModalMapa()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1 rounded-xl text-sm font-bold">
+                    <i class="fa-solid fa-xmark"></i> Fechar
+                </button>
+            </div>
+            <div class="flex-1 p-4 md:p-6 flex flex-col gap-4 overflow-y-auto">
+                <p class="text-xs text-slate-400 text-center"><span id="descricao-modal-mapa">Território brasileiro dividido pelos limites reais dos 26 estados e do Distrito Federal. No 2º turno, somente os dois finalistas aparecem nas cores e na contagem de UFs.</span></p>
+                <div id="legenda-mapa-estados" class="flex flex-wrap justify-center gap-3"></div>
+                <div class="bg-slate-950 p-2 md:p-5 rounded-2xl border border-slate-800 flex items-center justify-center min-h-[360px]">
+                    <div id="grid-estados-brasil" class="w-full max-w-3xl flex items-center justify-center">
+                        <p class="text-slate-400 text-sm">Carregando mapa do Brasil...</p>
+                    </div>
+                </div>
+                <p class="text-[10px] text-slate-500 text-center"><span id="ajuda-modal-mapa">Passe o cursor sobre um estado para ver o nome e o candidato que está vencendo nele.</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE IMPEACHMENT (400 DEPUTADOS) -->
+    <div id="modal-impeachment" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col p-4">
+        <div class="bg-slate-900 border-4 border-red-600 rounded-2xl flex-1 flex flex-col max-w-5xl w-full mx-auto overflow-hidden">
+            <div class="p-4 bg-slate-950 border-b-2 border-slate-800 flex justify-between items-center">
+                <h3 class="text-xl font-black text-red-500 flex items-center gap-2">
+                    <i class="fa-solid fa-gavel"></i>
+                    Votação de Impeachment no Congresso (400 Parlamentares)
+                </h3>
+                <button onclick="fecharModalImpeachment()" class="bg-red-600 hover:bg-red-500 text-white font-black px-4 py-2 rounded-xl text-sm border-2 border-white">
+                    <i class="fa-solid fa-xmark"></i> Fechar
+                </button>
+            </div>
+            <div class="flex-1 p-6 flex flex-col gap-4 overflow-y-auto">
+                <div class="flex flex-col md:flex-row items-center justify-between bg-slate-950 p-4 rounded-xl border-2 border-slate-800 gap-4">
+                    <div>
+                        <h4 id="imp-titulo-pres" class="text-lg font-black text-white">Presidente: -</h4>
+                        <p class="text-xs text-slate-400">Nota Atual de Aprovação do Governo: <span id="imp-nota-gov" class="font-mono text-amber-400 font-black">50</span>/100</p>
+                        <p class="text-[11px] text-slate-500 mt-1">Com aprovação acima de 30, o impeachment é extremamente difícil. Com 30 ou menos, a votação pode ganhar força.</p>
+                    </div>
+                    
+                    <!-- Controles de Velocidade do Impeachment -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-slate-300">Velocidade:</span>
+                        <button onclick="setVelocidadeImpeachment(0.1)" class="imp-vel-btn px-2 py-1 text-xs font-black rounded bg-slate-800 text-white hover:bg-amber-400 hover:text-black">0.1x</button>
+                    <button onclick="setVelocidadeImpeachment(0.5)" class="imp-vel-btn px-2 py-1 text-xs font-black rounded bg-slate-800 text-white hover:bg-amber-400 hover:text-black">0.5x</button>
+                        <button onclick="setVelocidadeImpeachment(1)" class="imp-vel-btn px-2 py-1 text-xs font-black rounded bg-amber-400 text-black">1x</button>
+                        <button onclick="setVelocidadeImpeachment(5)" class="imp-vel-btn px-2 py-1 text-xs font-black rounded bg-slate-800 text-white hover:bg-amber-400 hover:text-black">5x</button>
+                        <button onclick="setVelocidadeImpeachment(20)" class="imp-vel-btn px-2 py-1 text-xs font-black rounded bg-slate-800 text-white hover:bg-amber-400 hover:text-black">Turbo</button>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button id="btn-iniciar-votacao-imp" onclick="iniciarVotacaoImpeachment()" class="btn-primary-custom text-black font-black px-5 py-2.5 rounded-xl text-sm uppercase">
+                            <i class="fa-solid fa-play"></i> Iniciar Votação
+                        </button>
+                        <button id="btn-continuar-imp" onclick="concluirImpeachment()" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white font-black px-5 py-2.5 rounded-xl text-sm uppercase border-2 border-white">
+                            <i class="fa-solid fa-arrow-right"></i> Continuar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Placar da Votação -->
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="bg-emerald-950 border-2 border-emerald-600 p-3 rounded-xl">
+                        <span class="text-xs font-bold text-emerald-300 uppercase block">Sim (Impeachment)</span>
+                        <span id="placar-sim" class="text-2xl font-black text-emerald-400 font-mono">0</span>
+                    </div>
+                    <div class="bg-red-950 border-2 border-red-600 p-3 rounded-xl">
+                        <span class="text-xs font-bold text-red-300 uppercase block">Não (Salvar)</span>
+                        <span id="placar-nao" class="text-2xl font-black text-red-400 font-mono">0</span>
+                    </div>
+                    <div class="bg-slate-800 border-2 border-slate-600 p-3 rounded-xl">
+                        <span class="text-xs font-bold text-slate-300 uppercase block">Abstenção</span>
+                        <span id="placar-abst" class="text-2xl font-black text-slate-300 font-mono">0</span>
+                    </div>
+                </div>
+
+                <!-- Grid dos 400 Deputados (50 por fileira) -->
+                <div class="bg-slate-950 p-4 rounded-xl border-2 border-slate-800 flex-1 flex items-center justify-center overflow-y-auto">
+                    <div id="grid-400-deputados" class="grid grid-cols-50 gap-1 max-w-4xl w-full">
+                        <!-- Gerado via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MENSAGEM DE ALERTA MODAL PERSONALIZADA -->
+    <div id="modal-alerta" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel p-6 rounded-2xl max-w-md w-full border border-slate-700 text-center shadow-2xl">
+            <h3 id="alerta-titulo" class="text-lg font-black text-amber-400 mb-2">Aviso Importante</h3>
+            <p id="alerta-texto" class="text-sm text-slate-300 mb-6 whitespace-pre-line"></p>
+            <button onclick="fecharAlerta()" class="btn-primary-custom text-black font-black px-6 py-2 rounded-xl text-sm uppercase">Continuar</button>
+        </div>
+    </div>
+
+    <!-- CONTINUAR APÓS O 1º TURNO: NÃO BLOQUEIA A VISUALIZAÇÃO DOS RESULTADOS -->
+    <button id="btn-continuar-primeiro-turno" onclick="continuarAposPrimeiroTurno()" class="hidden fixed right-4 md:right-8 top-1/2 -translate-y-1/2 z-[140] btn-primary-custom text-black font-black px-5 py-4 rounded-2xl shadow-2xl border-2 border-amber-300/60 max-w-[220px] text-left">
+        <span class="flex items-center gap-2"><i class="fa-solid fa-arrow-right text-lg"></i><span id="texto-btn-continuar-primeiro-turno">Continuar</span></span>
+        <span class="block text-[10px] font-bold opacity-75 mt-1">Veja os resultados antes de avançar</span>
+    </button>
+
+    <!-- SCRIPT DA APLICAÇÃO -->
+    <script>
+        const ELEITORADO_TOTAL = 214000000;
+
+        // Perfis resumidos para a simulação. São referências gerais, não regras obrigatórias para cada filiado.
+        const PARTIDOS = {
+          'PT': {nome:'Partido dos Trabalhadores', linha:'Esquerda / centro-esquerda', resumo:'Ênfase em redução das desigualdades, políticas sociais, valorização do trabalho, participação do Estado no desenvolvimento e ampliação de serviços públicos.', eixos:[-2,-2,2,1,1]},
+          'PL': {nome:'Partido Liberal', linha:'Direita', resumo:'Ênfase em liberalismo econômico, iniciativa privada, menor intervenção estatal em setores da economia, conservadorismo em pautas de costumes e segurança pública.', eixos:[2,2,-2,-1,-2]},
+          'MDB': {nome:'Movimento Democrático Brasileiro', linha:'Centro / ampla composição', resumo:'Perfil amplo e pragmático, com defesa da democracia representativa, reformas negociadas, desenvolvimento regional e composição de alianças variadas.', eixos:[0,0,0,0,0]},
+          'PP': {nome:'Progressistas', linha:'Centro-direita', resumo:'Em geral, defende economia de mercado, empreendedorismo, agronegócio, segurança pública e pautas conservadoras em parte de sua atuação.', eixos:[1,2,-1,-1,-1]},
+          'PSD': {nome:'Partido Social Democrático', linha:'Centro', resumo:'Perfil de centro e pragmático, com foco em gestão pública, desenvolvimento econômico, políticas sociais e articulação institucional.', eixos:[0,1,0,0,0]},
+          'PSDB': {nome:'Partido da Social Democracia Brasileira', linha:'Centro / centro', resumo:'Tradição social-democrata, com defesa de instituições democráticas, políticas sociais, responsabilidade fiscal, reformas e economia de mercado regulada.', eixos:[0,1,1,0,0]},
+          'PSOL': {nome:'Partido Socialismo e Liberdade', linha:'Esquerda', resumo:'Ênfase em redução das desigualdades, direitos trabalhistas, serviços públicos, direitos de minorias, justiça ambiental e maior tributação progressiva.', eixos:[-2,-2,2,2,2]},
+          'REDE': {nome:'Rede Sustentabilidade', linha:'Centro-esquerda / ambientalista', resumo:'Prioriza sustentabilidade, proteção ambiental, transparência, direitos humanos, democracia participativa e desenvolvimento sustentável.', eixos:[-1,0,1,2,1]},
+          'PDT': {nome:'Partido Democrático Trabalhista', linha:'Centro-esquerda / trabalhista', resumo:'Tradição trabalhista e nacional-desenvolvimentista, com valorização da educação pública, direitos do trabalho e papel ativo do Estado no desenvolvimento.', eixos:[-2,-1,2,1,1]},
+          'PCdoB': {nome:'Partido Comunista do Brasil', linha:'Esquerda', resumo:'Defende soberania nacional, desenvolvimento com planejamento estatal, direitos trabalhistas, políticas sociais e fortalecimento dos serviços públicos.', eixos:[-2,-2,2,1,2]},
+          'NOVO': {nome:'Partido Novo', linha:'Direita / liberal', resumo:'Ênfase em liberdade econômica, responsabilidade fiscal, simplificação do Estado, concorrência, empreendedorismo e gestão pública orientada a resultados.', eixos:[2,2,-1,0,-1]},
+          'Cidadania': {nome:'Cidadania', linha:'Centro / centro-esquerda liberal', resumo:'Valoriza democracia, direitos civis, pluralismo, sustentabilidade, educação e reformas institucionais, com posições econômicas variadas.', eixos:[0,1,1,1,1]},
+          'PODE': {nome:'Podemos', linha:'Centro', resumo:'Perfil heterogêneo, com ênfase em participação política, inovação na gestão, segurança pública e propostas de diferentes correntes.', eixos:[0,1,0,0,0]},
+          'UNIÃO': {nome:'União Brasil', linha:'Centro / centro-direita', resumo:'Partido amplo, com presença de correntes liberais e conservadoras; costuma enfatizar economia de mercado, desenvolvimento, gestão e segurança.', eixos:[1,2,-1,0,-1]},
+          'Republicanos': {nome:'Republicanos', linha:'Centro-direita', resumo:'Atuação frequentemente associada a valores conservadores, liberdade econômica, empreendedorismo, segurança e políticas sociais focalizadas.', eixos:[1,1,-1,0,-2]},
+          'PSB': {nome:'Partido Socialista Brasileiro', linha:'Centro-esquerda', resumo:'Tradição socialista democrática, com defesa de políticas sociais, redução das desigualdades, desenvolvimento sustentável e fortalecimento democrático.', eixos:[-1,-1,2,1,1]},
+          'PV': {nome:'Partido Verde', linha:'Centro / ambientalista', resumo:'Prioriza proteção ambiental, transição energética, sustentabilidade, direitos humanos e desenvolvimento com responsabilidade ecológica.', eixos:[0,0,1,2,1]},
+          'Solidariedade': {nome:'Solidariedade', linha:'Centro / trabalhista', resumo:'Dá destaque à proteção do trabalhador, inclusão social, geração de empregos, empreendedorismo e políticas de desenvolvimento.', eixos:[0,0,1,0,0]},
+          'PSTU': {nome:'Partido Socialista dos Trabalhadores Unificado', linha:'Esquerda / trotskista', resumo:'Defende socialismo, organização independente dos trabalhadores, estatização de setores estratégicos e oposição a políticas de austeridade.', eixos:[-2,-2,2,1,2]},
+          'PCO': {nome:'Partido da Causa Operária', linha:'Esquerda / marxista', resumo:'Defende programa socialista, organização da classe trabalhadora, nacionalização de setores estratégicos e ampliação de direitos sociais.', eixos:[-2,-2,2,0,2]},
+          'PCB': {nome:'Partido Comunista Brasileiro', linha:'Esquerda / comunista', resumo:'Defende transformação socialista, planejamento econômico, propriedade pública de setores estratégicos e fortalecimento dos direitos dos trabalhadores.', eixos:[-2,-2,2,1,2]},
+          'PRTB': {nome:'Partido Renovador Trabalhista Brasileiro', linha:'Direita / nacionalista', resumo:'Tem perfil nacionalista e conservador em parte de sua atuação, com ênfase em soberania, segurança e propostas de desenvolvimento nacional.', eixos:[1,1,-1,0,-2]},
+          'PMB': {nome:'Partido da Mulher Brasileira', linha:'Centro / diversidade de correntes', resumo:'Apresenta foco declarado na representação e participação das mulheres, com posições econômicas e sociais que podem variar entre seus quadros.', eixos:[0,0,1,0,1]},
+          'DC': {nome:'Democracia Cristã', linha:'Centro-direita / democrata-cristã', resumo:'Tradição democrata-cristã, com referências à dignidade humana, família, solidariedade, liberdade econômica e responsabilidade social.', eixos:[1,1,0,0,-1]},
+          'UP': {nome:'Unidade Popular', linha:'Esquerda / socialista', resumo:'Defende soberania popular, direitos sociais, serviços públicos, reforma agrária e maior controle público de setores estratégicos.', eixos:[-2,-2,2,1,2]},
+          'AGIR': {nome:'Agir', linha:'Centro', resumo:'Legenda de perfil amplo, com propostas e alianças que variam entre candidaturas e diretórios; o simulador usa uma orientação de centro.', eixos:[0,0,0,0,0]},
+          'AVANTE': {nome:'Avante', linha:'Centro', resumo:'Perfil pragmático e heterogêneo, com ênfase variável em desenvolvimento, gestão pública, inclusão e articulação política.', eixos:[0,1,0,0,0]},
+          'MOBILIZA': {nome:'Mobilização Nacional', linha:'Centro', resumo:'Partido de perfil amplo; suas propostas podem variar por candidatura. No jogo, começa com orientação centrista e foco em participação e desenvolvimento.', eixos:[0,0,0,0,0]},
+          'PRD': {nome:'Partido Renovação Democrática', linha:'Centro / centro-direita', resumo:'Legenda formada por fusão partidária, com perfil plural e pragmático; no jogo, representa propostas de gestão, desenvolvimento e economia de mercado.', eixos:[1,1,0,0,0]},
+          'MISSÃO': {nome:'Partido Missão', linha:'Centro-direita / liberal', resumo:'Legenda recente; como seu programa e atuação ainda estão em consolidação, o simulador usa um perfil inicial liberal e institucional, ajustável na narrativa.', eixos:[1,1,0,0,0]}
+        };
+        // Cores de referência das identidades visuais dos partidos brasileiros.
+        // A cor acompanha o partido em todos os elementos do mapa e da apuração.
+        const CORES_PARTIDOS = {
+            'PT': '#E31B23',          // vermelho
+            'PL': '#005DAA',          // azul
+            'MDB': '#00A859',         // verde
+            'PP': '#2457A6',          // azul
+            'PSD': '#F58220',         // laranja
+            'PSDB': '#1D4E9E',        // azul
+            'PSOL': '#F4D21F',        // amarelo
+            'REDE': '#00A86B',        // verde
+            'PDT': '#D71920',         // vermelho
+            'PCdoB': '#D71920',       // vermelho
+            'NOVO': '#F58220',        // laranja
+            'Cidadania': '#E31B23',   // vermelho
+            'PODE': '#6B2D91',        // roxo
+            'UNIÃO': '#153E90',       // azul
+            'Republicanos': '#D71920',// vermelho
+            'PSB': '#E31B23',         // vermelho
+            'PV': '#168447',          // verde
+            'Solidariedade': '#F58220',// laranja
+            'PSTU': '#D71920',        // vermelho
+            'PCO': '#D71920',         // vermelho
+            'PCB': '#D71920',         // vermelho
+            'PRTB': '#174A8B',        // azul
+            'PMB': '#D94A9B',         // rosa
+            'DC': '#174A8B',          // azul
+            'UP': '#D71920',          // vermelho
+            'AGIR': '#F58220',        // laranja
+            'AVANTE': '#174A8B',      // azul
+            'MOBILIZA': '#F58220',    // laranja
+            'PRD': '#174A8B',         // azul
+            'MISSÃO': '#202B55'      // azul-marinho
+        };
+        function corDoPartido(sigla) {
+            return CORES_PARTIDOS[sigla] || '#64748b';
+        }
+        let rascunhoCandidatos = [];
+        let configuracaoCandidatos = [];
+        // O modo escolhido permanece ativo durante a partida.
+        let modoEleitoral = 'presidencial';
+        let estadoGovernamentalSelecionado = 'GO';
+        let eleicoesJogadas = 0;
+        let jogoEncerrado = false;
+        function selecionarModoEleitoral(modo) {
+            modoEleitoral = modo === 'governamental' ? 'governamental' : 'presidencial';
+            abrirCriacaoCandidatos();
+        }
+        function atualizarEstadoGovernamental(sigla) {
+            const estado = ESTADOS_BRASIL.find(e => e.sigla === sigla);
+            if (!estado) return;
+            estadoGovernamentalSelecionado = estado.sigla;
+            atualizarCabecalhoModo();
+            const texto = document.getElementById('texto-estado-governamental');
+            if (texto) texto.textContent = `A eleição governamental será realizada em ${estado.nome} (${estado.sigla}).`;
+            const titulo = document.querySelector('#tela-criar-candidatos h2');
+            if (titulo && modoEleitoral === 'governamental') titulo.textContent = `Candidatos ao Governo de ${estado.nome}`;
+        }
+        function abrirCriacaoCandidatos(){
+            document.getElementById('tela-inicial').classList.add('hidden');
+            document.getElementById('tela-criar-candidatos').classList.remove('hidden');
+            const painelEstado = document.getElementById('painel-estado-governamental');
+            const seletorEstado = document.getElementById('seletor-estado-governamental');
+            const titulo = document.querySelector('#tela-criar-candidatos h2');
+            const descricao = document.querySelector('#tela-criar-candidatos .flex.flex-wrap.justify-between.items-center p.text-slate-400');
+            if (modoEleitoral === 'governamental') {
+                painelEstado.classList.remove('hidden');
+                if (!seletorEstado.options.length) {
+                    seletorEstado.innerHTML = ESTADOS_BRASIL.slice().sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR')).map(e => `<option value="${e.sigla}">${e.nome} (${e.sigla})</option>`).join('');
+                }
+                seletorEstado.value = estadoGovernamentalSelecionado;
+                titulo.textContent = `Candidatos ao Governo de ${ESTADOS_BRASIL.find(e => e.sigla === estadoGovernamentalSelecionado).nome}`;
+                if (descricao) descricao.textContent = 'Escolha de 2 a 20 candidatos para disputar o governo do estado selecionado.';
+                atualizarEstadoGovernamental(estadoGovernamentalSelecionado);
+            } else {
+                painelEstado.classList.add('hidden');
+                titulo.textContent = 'Criar candidatos';
+                if (descricao) descricao.textContent = 'Escolha de 2 a 20 candidatos. Cada um precisa de nome, número e partido.';
+            }
+            if(!rascunhoCandidatos.length){rascunhoCandidatos=[{nome:'',num:'',partido:'PT'},{nome:'',num:'',partido:'PL'}];}
+            renderizarFormularioCandidatos();
+        }
+        function voltarTelaInicial(){ document.getElementById('tela-criar-candidatos').classList.add('hidden'); document.getElementById('tela-inicial').classList.remove('hidden'); }
+        function adicionarLinhaCandidato(){ salvarRascunhoAtual(); if(rascunhoCandidatos.length>=20)return; rascunhoCandidatos.push({nome:'',num:'',partido:'PT'}); renderizarFormularioCandidatos(); }
+        function removerLinhaCandidato(i){ salvarRascunhoAtual(); if(rascunhoCandidatos.length<=2)return; rascunhoCandidatos.splice(i,1); renderizarFormularioCandidatos(); }
+
+        function gerarCandidatoAleatorio(i) {
+          salvarRascunhoAtual();
+          if (!rascunhoCandidatos[i]) return;
+
+          const nomes = [
+            "Alexandre", "André", "Antônio", "Arthur", "Bruno", "Caio", "Carlos",
+            "Daniel", "Eduardo", "Felipe", "Gabriel", "Gustavo", "Henrique",
+            "João", "Leonardo", "Lucas", "Marcelo", "Marcos", "Mateus", "Miguel",
+            "Pedro", "Rafael", "Ricardo", "Samuel", "Thiago", "Vinícius",
+            "Amanda", "Ana", "Beatriz", "Camila", "Carolina", "Clara", "Eduarda",
+            "Fernanda", "Isabela", "Júlia", "Larissa", "Letícia", "Luana",
+            "Mariana", "Marina", "Patrícia", "Renata", "Sofia", "Valentina"
+          ];
+          const sobrenomes = [
+            "Almeida", "Alves", "Andrade", "Barbosa", "Barros", "Campos",
+            "Cardoso", "Carvalho", "Costa", "Dias", "Duarte", "Fernandes",
+            "Ferreira", "Gomes", "Lima", "Lopes", "Machado", "Martins",
+            "Melo", "Mendes", "Monteiro", "Moreira", "Nascimento", "Nogueira",
+            "Oliveira", "Pereira", "Ribeiro", "Rocha", "Santana", "Santos",
+            "Silva", "Souza", "Teixeira", "Vieira"
+          ];
+
+          const usados = new Set(rascunhoCandidatos
+            .filter((c, indice) => indice !== i)
+            .map(c => Number(c.num))
+            .filter(n => Number.isInteger(n) && n >= 1 && n <= 99));
+          const numerosLivres = Array.from({length: 99}, (_, indice) => indice + 1)
+            .filter(n => !usados.has(n));
+          if (!numerosLivres.length) {
+            alertBox("Não há números de candidatura livres entre 1 e 99.");
+            return;
+          }
+
+          const escolher = lista => lista[Math.floor(Math.random() * lista.length)];
+          const partidos = Object.keys(PARTIDOS);
+          rascunhoCandidatos[i] = {
+            nome: escolher(nomes) + " " + escolher(sobrenomes),
+            num: String(escolher(numerosLivres)),
+            partido: escolher(partidos)
+          };
+          renderizarFormularioCandidatos();
+        }
+        function salvarRascunhoAtual(){ document.querySelectorAll('[data-candidato-index]').forEach(card=>{const i=Number(card.dataset.candidatoIndex); if(!rascunhoCandidatos[i])return; rascunhoCandidatos[i].nome=card.querySelector('.cand-nome').value; rascunhoCandidatos[i].num=card.querySelector('.cand-num').value; rascunhoCandidatos[i].partido=card.querySelector('.cand-partido').value;}); }
+        function atualizarInfoPartido(i){const card=document.querySelector(`[data-candidato-index="${i}"]`); if(!card)return; const p=PARTIDOS[card.querySelector('.cand-partido').value]; card.querySelector('.partido-info').innerHTML=`<div class="flex items-center gap-2 mb-2"><span class="inline-block w-3 h-3 rounded-full" style="background:${corDoPartido(card.querySelector('.cand-partido').value)}"></span><b class="text-amber-300">${p.linha}</b></div><p class="mt-1">${p.resumo}</p>`; const rivais=Object.entries(PARTIDOS).filter(([sigla,x])=>sigla!==card.querySelector('.cand-partido').value && x.eixos.reduce((s,v,j)=>s+Math.abs(v-p.eixos[j]),0)>=7).slice(0,5).map(x=>x[0]); card.querySelector('.partido-rivais').textContent=rivais.length?'Possíveis divergências programáticas com: '+rivais.join(', '):'Perfil de centro ou amplo; divergências dependem das propostas específicas.'; }
+        function renderizarFormularioCandidatos(){
+          document.getElementById('contador-candidatos').textContent=rascunhoCandidatos.length;
+          document.getElementById('btn-adicionar-candidato').disabled=rascunhoCandidatos.length>=20;
+          document.getElementById('btn-adicionar-candidato').classList.toggle('opacity-40',rascunhoCandidatos.length>=20);
+          const opts=Object.keys(PARTIDOS).map(sigla=>`<option value="${sigla}">${sigla} — ${PARTIDOS[sigla].nome}</option>`).join('');
+          document.getElementById('lista-criacao-candidatos').innerHTML=rascunhoCandidatos.map((c,i)=>`<section data-candidato-index="${i}" class="glass-panel p-5 rounded-2xl border border-slate-700"><div class="flex justify-between items-center mb-4"><h3 class="font-black text-lg"><span class="text-amber-400">#${i+1}</span> Candidato</h3>${rascunhoCandidatos.length>2?`<button onclick="removerLinhaCandidato(${i})" class="text-rose-400 text-sm font-bold">Remover</button>`:''}</div><button type="button" onclick="gerarCandidatoAleatorio(${i})" class="w-full mb-4 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl font-black text-sm"><i class="fa-solid fa-dice mr-2"></i>Gerar candidato aleatório</button><label class="text-xs text-slate-400 font-bold">NOME</label><input maxlength="50" class="cand-nome w-full mt-1 mb-3 bg-slate-950 border border-slate-700 rounded-xl p-3 text-white" placeholder="Nome do candidato" value="${String(c.nome||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}"><label class="text-xs text-slate-400 font-bold">NÚMERO DE CANDIDATURA</label><input type="number" min="1" max="99" class="cand-num w-full mt-1 mb-3 bg-slate-950 border border-slate-700 rounded-xl p-3 text-white" placeholder="Ex.: 13" value="${c.num||''}"><label class="text-xs text-slate-400 font-bold">PARTIDO</label><select class="cand-partido w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl p-3 text-white" onchange="atualizarInfoPartido(${i})">${opts}</select><p class="text-xs text-slate-400 mt-3">A influência eleitoral será calculada automaticamente pelo partido e por fatores aleatórios da campanha.</p><div class="partido-info text-xs text-slate-300 bg-slate-950/70 rounded-xl p-3 mt-3"></div><p class="partido-rivais text-xs text-amber-300 mt-2"></p></section>`).join('');
+          document.querySelectorAll('[data-candidato-index]').forEach(card=>{const i=Number(card.dataset.candidatoIndex);card.querySelector('.cand-partido').value=rascunhoCandidatos[i].partido;atualizarInfoPartido(i);});
+        }
+        function confirmarCriacaoCandidatos(){
+          salvarRascunhoAtual();
+          if(rascunhoCandidatos.length<2||rascunhoCandidatos.length>20){alertBox('É necessário criar no mínimo 2 e no máximo 20 candidatos.');return;}
+          const nums=rascunhoCandidatos.map(c=>Number(c.num));
+          for(let i=0;i<rascunhoCandidatos.length;i++){const c=rascunhoCandidatos[i];if(!c.nome.trim()||!Number.isInteger(nums[i])||nums[i]<1||nums[i]>99||!PARTIDOS[c.partido]){alertBox(`Preencha corretamente nome, número (1 a 99) e partido do candidato ${i+1}.`);return;}}
+          if(new Set(nums).size!==nums.length){alertBox('Cada candidato precisa ter um número de candidatura diferente.');return;}
+          configuracaoCandidatos=rascunhoCandidatos.map((c,i)=>({id:i+1,nome:c.nome.trim().replace(/[<>]/g,''),partido:c.partido,num:Number(c.num),cor:corDoPartido(c.partido),perfil:PARTIDOS[c.partido],votos:0,votosAlvo:0,intencao:0,favorito:i<2,estadoVitorias:0,investigado:false,afastado:false,bônus:0}));
+          document.getElementById('tela-criar-candidatos').classList.add('hidden');
+          iniciarNovaEleicao();
+        }
+
+        const ESTADOS_BRASIL = [
+            { sigla: 'SP', nome: 'São Paulo' }, { sigla: 'MG', nome: 'Minas Gerais' },
+            { sigla: 'RJ', nome: 'Rio de Janeiro' }, { sigla: 'BA', nome: 'Bahia' },
+            { sigla: 'PR', nome: 'Paraná' }, { sigla: 'RS', nome: 'Rio Grande do Sul' },
+            { sigla: 'PE', nome: 'Pernambuco' }, { sigla: 'CE', nome: 'Ceará' },
+            { sigla: 'PA', nome: 'Pará' }, { sigla: 'SC', nome: 'Santa Catarina' },
+            { sigla: 'GO', nome: 'Goiás' }, { sigla: 'MA', nome: 'Maranhão' },
+            { sigla: 'AM', nome: 'Amazonas' }, { sigla: 'ES', nome: 'Espírito Santo' },
+            { sigla: 'PB', nome: 'Paraíba' }, { sigla: 'MT', nome: 'Mato Grosso' },
+            { sigla: 'RN', nome: 'Rio Grande do Norte' }, { sigla: 'AL', nome: 'Alagoas' },
+            { sigla: 'PI', nome: 'Piauí' }, { sigla: 'DF', nome: 'Distrito Federal' },
+            { sigla: 'MS', nome: 'Mato Grosso do Sul' }, { sigla: 'SE', nome: 'Sergipe' },
+            { sigla: 'RO', nome: 'Rondônia' }, { sigla: 'TO', nome: 'Tocantins' },
+            { sigla: 'AC', nome: 'Acre' }, { sigla: 'AP', nome: 'Amapá' }, { sigla: 'RR', nome: 'Roraima' }
+        ];
+
+        let candidatos = [];
+        let etapaAtual = 1; // 1 a 5: campanha do 1º turno; 6: votação; 7 a 9: campanha do 2º turno; 10: votação do 2º turno; 11: mandato
+        let turnosAtuais = 1;
+        let emApuracao = false;
+        let apuracaoConcluida = false;
+        let velocidade = 1;
+        let intervaloApuracao = null;
+        let votosApurados = 0;
+        // A transição só acontece quando o jogador clicar no botão lateral.
+        let transicaoPrimeiroTurnoPendente = null;
+
+        let historicoSemanas = Object.fromEntries(Array.from({length: 8}, (_, i) => [i + 1, []]));
+        let abaSemanaAtiva = 1;
+        let tweetsGlobal = [];
+
+        // Mandato
+        let emMandato = false;
+        let semanaMandato = 0;
+        let notaMandato = 50;
+        let presidenteEleito = null;
+        let ultimoVencedorId = null;
+        let ultimaAprovacaoGoverno = null;
+        let historicoMandato = [];
+        let historicoDiscursos = [];
+        let historicoLeis = [];
+        let intervaloMandato = null;
+        let exPresidenteInelegivelId = null;
+        let eleicoesRestantesInelegivel = 0;
+        let indicadoDoExPresidenteId = null;
+        let indicadoExternoDados = null;
+        let contarSuspensaoNaProximaEleicao = false;
+
+        // Impeachment
+        let impeachmentEmAndamento = false;
+        let intervaloImpeachment = null;
+        let velocidadeImpeachment = 1;
+        let deputadosVotos = [];
+        let indexDeputadoAtual = 0;
+        let resultadoSim = 0;
+        let resultadoNao = 0;
+        let resultadoAbst = 0;
+
+        function encerrarJogoPorLimite() {
+            jogoEncerrado = true;
+            clearInterval(intervaloApuracao);
+            clearInterval(intervaloMandato);
+            clearInterval(intervaloImpeachment);
+            emApuracao = false;
+            emMandato = false;
+            document.getElementById('tela-fim-jogo').classList.remove('hidden');
+            document.getElementById('tela-fim-jogo').classList.add('flex');
+        }
+
+        function novoJogoDepoisDoLimite() {
+            document.getElementById('tela-fim-jogo').classList.add('hidden');
+            document.getElementById('tela-fim-jogo').classList.remove('flex');
+            document.getElementById('tela-inicial').classList.remove('hidden');
+            document.getElementById('tela-criar-candidatos').classList.add('hidden');
+            eleicoesJogadas = 0;
+            jogoEncerrado = false;
+            configuracaoCandidatos = [];
+            rascunhoCandidatos = [];
+            presidenteEleito = null;
+            exPresidenteInelegivelId = null;
+            eleicoesRestantesInelegivel = 0;
+            indicadoDoExPresidenteId = null;
+            indicadoExternoDados = null;
+            contarSuspensaoNaProximaEleicao = false;
+        }
+
+        function abrirGerenciadorCandidatos() {
+            if (etapaAtual > 6 || emMandato || emApuracao || apuracaoConcluida) {
+                alertBox('O gerenciamento de candidatos fica disponível durante as cinco semanas de campanha e antes do início da apuração.');
+                return;
+            }
+            const opts = Object.keys(PARTIDOS).map(sigla => `<option value="${sigla}">${sigla}</option>`).join('');
+            document.getElementById('novo-cand-partido').innerHTML = opts;
+            renderizarGerenciadorCandidatos();
+            document.getElementById('modal-gerenciar-candidatos').classList.remove('hidden');
+        }
+
+        function fecharGerenciadorCandidatos() {
+            document.getElementById('modal-gerenciar-candidatos').classList.add('hidden');
+        }
+
+        function renderizarGerenciadorCandidatos() {
+            const ativos = candidatos.filter(c => !c.afastado);
+            document.getElementById('gerenciador-lista-candidatos').innerHTML = candidatos.map(c => `
+                <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-950/80 border border-slate-700 rounded-xl p-3">
+                    <div class="flex items-center gap-3"><span class="w-3 h-3 rounded-full" style="background:${c.cor}"></span><div><b>${c.nome}</b>${seloIndicacao(c)}<p class="text-xs text-slate-400">${c.partido} · Nº ${c.num} ${c.afastado ? '· Retirado' : ''}</p></div></div>
+                    ${!c.afastado && ativos.length > 2 ? `<button onclick="removerCandidatoDuranteJogo(${c.id})" class="text-rose-400 font-bold text-sm">Retirar</button>` : (!c.afastado ? '<span class="text-xs text-slate-500">Mínimo de 2 ativos</span>' : '')}
+                </div>`).join('');
+        }
+
+        function removerCandidatoDuranteJogo(id) {
+            const ativos = candidatos.filter(c => !c.afastado);
+            if (ativos.length <= 2) { alertBox('A eleição precisa manter pelo menos dois candidatos ativos.'); return; }
+            const c = candidatos.find(x => x.id === id);
+            if (!c || c.afastado) return;
+            c.afastado = true;
+            c.votosAlvo = 0;
+            c.votos = 0;
+            configuracaoCandidatos = configuracaoCandidatos.filter(x => x.id !== id);
+            renderizarGerenciadorCandidatos();
+            atualizarInterface();
+            tweetsGlobal.push({tempo:'Campanha', texto:`${c.nome} (${c.partido}) retirou sua candidatura durante a campanha.`});
+        }
+
+        function adicionarCandidatoDuranteJogo() {
+            const nome = document.getElementById('novo-cand-nome').value.trim();
+            const num = Number(document.getElementById('novo-cand-num').value);
+            const partido = document.getElementById('novo-cand-partido').value;
+            if (!nome || !Number.isInteger(num) || num < 1 || num > 99 || !PARTIDOS[partido]) {
+                alertBox('Preencha nome, número entre 1 e 99 e partido.'); return;
+            }
+            if (candidatos.filter(c => !c.afastado).length >= 20) { alertBox('O limite é de 20 candidatos ativos.'); return; }
+            if (candidatos.some(c => Number(c.num) === num)) { alertBox('Esse número já está sendo usado por outro candidato.'); return; }
+            const id = Math.max(0, ...candidatos.map(c => Number(c.id) || 0)) + 1;
+            const novo = {id, nome:nome.replace(/[<>]/g,''), num, partido, cor:corDoPartido(partido), perfil:PARTIDOS[partido], votos:0, votosAlvo:0, intencao:0, estadoVitorias:0, investigado:false, afastado:false, bônus:0, favorito:false};
+            candidatos.push(novo);
+            configuracaoCandidatos.push({...novo});
+            document.getElementById('novo-cand-nome').value = '';
+            document.getElementById('novo-cand-num').value = '';
+            tweetsGlobal.push({tempo:'Campanha', texto:`${novo.nome} (${novo.partido}) entrou na disputa com chance configurada de ${chance}%.`});
+            renderizarGerenciadorCandidatos();
+            atualizarInterface();
+        }
+
+        function alertBox(texto, titulo = "Aviso Eleitoral") {
+            document.getElementById('alerta-titulo').innerText = titulo;
+            document.getElementById('alerta-texto').innerText = texto;
+            document.getElementById('modal-alerta').classList.remove('hidden');
+        }
+        function fecharAlerta() {
+            document.getElementById('modal-alerta').classList.add('hidden');
+        }
+
+        function anoDaEleicao() {
+            return 2026 + (eleicoesJogadas - 1) * 4;
+        }
+
+        function atualizarCabecalhoModo() {
+            const titulo = document.getElementById('titulo-eleicoes-header');
+            const estado = ESTADOS_BRASIL.find(e => e.sigla === estadoGovernamentalSelecionado);
+            if (titulo) titulo.textContent = modoEleitoral === 'governamental' && estado
+                ? `${estado.nome.toUpperCase()} ELEIÇÕES`
+                : 'BRASIL ELEIÇÕES';
+            document.title = modoEleitoral === 'governamental' && estado
+                ? `Simulador de Eleições — ${estado.nome}`
+                : 'Simulador de Apuração Eleitoral';
+        }
+
+        function atualizarAnoDaEleicao() {
+            atualizarCabecalhoModo();
+            const ano = anoDaEleicao();
+            const cabecalho = document.getElementById('ano-eleicao-header');
+            if (cabecalho) cabecalho.textContent = ano;
+            document.title = `Simulador de Apuração Eleitoral ${ano}`;
+            const faseTitulo = document.getElementById('fase-titulo');
+            if (faseTitulo) faseTitulo.textContent = modoEleitoral === 'governamental'
+                ? `Semana 1 de 5: Eleições para Governador de ${ESTADOS_BRASIL.find(e => e.sigla === estadoGovernamentalSelecionado)?.nome || estadoGovernamentalSelecionado} ${ano}`
+                : `Semana 1 de 5: Eleições Presidenciais ${ano}`;
+        }
+
+        function iniciarNovaEleicao() {
+            transicaoPrimeiroTurnoPendente = null;
+            const btnContinuarTurno = document.getElementById('btn-continuar-primeiro-turno');
+            if (btnContinuarTurno) btnContinuarTurno.classList.add('hidden');
+            if (eleicoesJogadas >= 20) {
+                encerrarJogoPorLimite();
+                return;
+            }
+            eleicoesJogadas++;
+            jogoEncerrado = false;
+            atualizarAnoDaEleicao();
+            if (contarSuspensaoNaProximaEleicao && eleicoesRestantesInelegivel > 0) {
+                eleicoesRestantesInelegivel--;
+                contarSuspensaoNaProximaEleicao = false;
+            }
+            if (presidenteEleito) {
+                ultimoVencedorId = presidenteEleito.id;
+                ultimaAprovacaoGoverno = notaMandato;
+            }
+            clearInterval(intervaloApuracao);
+            clearInterval(intervaloMandato);
+            clearInterval(intervaloImpeachment);
+            emApuracao = false;
+            apuracaoConcluida = false;
+            emMandato = false;
+            semanaMandato = 0;
+            notaMandato = 50;
+            presidenteEleito = null;
+            historicoMandato = [];
+            historicoDiscursos = [];
+            historicoLeis = [];
+            document.getElementById('secao-historico-mandato').classList.add('hidden');
+            document.getElementById('conteudo-historico-mandato').innerHTML = "As decisões do governo aparecerão aqui.";
+            document.getElementById('conteudo-historico-discursos').innerHTML = "Os discursos aparecerão aqui.";
+            document.getElementById('conteudo-historico-leis').innerHTML = "As leis aprovadas aparecerão aqui.";
+            etapaAtual = 1;
+            turnosAtuais = 1;
+            votosApurados = 0;
+            tweetsGlobal = [];
+
+            document.getElementById('btn-impeachment').classList.add('hidden');
+            document.getElementById('badge-nota-governo').classList.add('hidden');
+            document.getElementById('secao-historico-semanas').classList.remove('hidden');
+            document.getElementById('turno-badge').innerText = "1º Turno";
+            if (modoEleitoral === 'governamental') {
+                const estadoNome = ESTADOS_BRASIL.find(e => e.sigla === estadoGovernamentalSelecionado)?.nome || estadoGovernamentalSelecionado;
+                document.getElementById('fase-tag').innerText = `Eleição Governamental — ${estadoNome}`;
+                document.getElementById('fase-titulo').innerText = `Semana 1 de 5: Governo de ${estadoNome}`;
+            } else {
+                document.getElementById('fase-tag').innerText = 'Eleições Presidenciais';
+                document.getElementById('fase-titulo').innerText = `Semana 1 de 5: Eleições Presidenciais ${anoDaEleicao()}`;
+            }
+            const contadorEleicoes = document.getElementById('contador-eleicoes-jogo');
+            if (contadorEleicoes) contadorEleicoes.textContent = `${eleicoesJogadas}/20`;
+
+            // Os candidatos são definidos pelo jogador na tela inicial. Todos começam com 0%.
+            candidatos = (configuracaoCandidatos.length ? configuracaoCandidatos : []).map(c => ({
+                ...c, votos: 0, votosAlvo: 0, intencao: 0, estadoVitorias: 0,
+                investigado: false, afastado: false, bônus: 0
+            }));
+
+            if (exPresidenteInelegivelId !== null && eleicoesRestantesInelegivel > 0 && indicadoExternoDados) {
+                // O indicado é uma pessoa nova, fora da lista dos candidatos originais.
+                candidatos.push({
+                    ...indicadoExternoDados,
+                    votos: 0,
+                    votosAlvo: 0,
+                    intencao: 0,
+                    estadoVitorias: 0,
+                    investigado: false,
+                    afastado: false,
+                    bônus: 0,
+                    indicadoPor: "Indicado pelo ex-presidente",
+                    desgasteIndicacao: true
+                });
+            }
+
+            if (exPresidenteInelegivelId !== null && eleicoesRestantesInelegivel > 0) {
+                const exPresidente = candidatos.find(c => c.id === exPresidenteInelegivelId);
+                if (exPresidente) { exPresidente.afastado = true; exPresidente.inelegivel = true; }
+            } else if (eleicoesRestantesInelegivel === 0) {
+                exPresidenteInelegivelId = null;
+                indicadoDoExPresidenteId = null;
+            }
+
+            // A pesquisa inicial usa notoriedade partidária como ponto de partida.
+            // Assim, as intenções exibidas já representam a mesma base usada na eleição.
+            inicializarIntencoesDeVoto();
+
+            historicoSemanas = Object.fromEntries(Array.from({length: 8}, (_, i) => [i + 1, []]));
+            gerarEventosPreCampanha();
+            if (exPresidenteInelegivelId !== null && eleicoesRestantesInelegivel > 0) {
+                const indicado = candidatos.find(c => c.id === indicadoDoExPresidenteId);
+                if (indicado) {
+                    historicoSemanas[1].push({
+                        candidato: indicado.nome,
+                        texto: `foi indicado por um ex-presidente que sofreu impeachment. A associação com o governo afastado gera desconfiança entre parte dos eleitores.`,
+                        delta: 0,
+                        antes: 0,
+                        depois: 0,
+                        resultado: "DESGASTE POLÍTICO"
+                    });
+                    tweetsGlobal.push({
+                        tempo: "Pré-campanha",
+                        texto: `A indicação de ${indicado.nome} pelo ex-presidente afastado gera críticas e desconfiança. A candidatura começa com 0% de intenção de voto.`
+                    });
+                }
+            }
+            atualizarInterface();
+            mudarAbaSemana(1);
+        }
+
+        function gerarEventosPreCampanha() {
+            // As semanas começam vazias: os acontecimentos e seus efeitos
+            // só são sorteados quando o jogador avança para cada semana.
+            historicoSemanas = Object.fromEntries(Array.from({length: 8}, (_, i) => [i + 1, []]));
+        }
+
+        function gerarEventosSemana(semana) {
+            const boasDecisoes = [
+                "apresentou um plano convincente para melhorar a saúde pública e recebeu elogios.",
+                "anunciou propostas para gerar empregos e fortalecer a economia.",
+                "fez uma visita a uma região esquecida e ouviu as demandas da população.",
+                "participou de um debate e apresentou respostas claras sobre seus projetos.",
+                "divulgou medidas para melhorar a educação e ganhou apoio dos eleitores.",
+                "realizou um comício organizado, com grande participação popular."
+            ];
+            const decisoesRuins = [
+                "apresentou uma proposta confusa durante uma entrevista e foi criticado.",
+                "faltou a um compromisso importante com moradores e perdeu apoio.",
+                "fez uma declaração polêmica que repercutiu negativamente.",
+                "foi mal no debate e não conseguiu explicar suas propostas.",
+                "prometeu uma medida considerada inviável por especialistas.",
+                "teve problemas na organização de um evento de campanha."
+            ];
+
+            historicoSemanas[semana] = [];
+            candidatos.forEach(c => {
+                if (c.afastado) return;
+
+                let delta = 0;
+                let desc = "";
+                const intencaoAntes = c.intencao;
+                let sorteio = Math.random();
+
+                // O indicado de um presidente afastado começa sem intenção de voto
+                // e enfrenta maior rejeição por estar associado ao governo cassado.
+                if (c.desgasteIndicacao) {
+                    sorteio = Math.min(0.999, sorteio + 0.25);
+                }
+
+                if (sorteio < 0.48) {
+                    // Boa decisão: aumenta a intenção de voto.
+                    delta = Math.floor(Math.random() * 3) + 1;
+                    desc = `${c.nome} ${boasDecisoes[Math.floor(Math.random() * boasDecisoes.length)]} A decisão foi bem recebida!`;
+                    tweetsGlobal.push({ tempo: `Semana ${semana}`, texto: `A campanha de ${c.nome} acertou na decisão! Eleitores demonstram mais apoio.` });
+                } else if (sorteio < 0.90) {
+                    // Decisão ruim: reduz a intenção de voto.
+                    delta = -(Math.floor(Math.random() * 3) + 1);
+                    desc = `${c.nome} ${decisoesRuins[Math.floor(Math.random() * decisoesRuins.length)]} A decisão desagradou parte do eleitorado.`;
+                    tweetsGlobal.push({ tempo: `Semana ${semana}`, texto: `A decisão de ${c.nome} foi muito criticada. A campanha enfrenta pressão.` });
+                } else {
+                    // Crise grave ocasional.
+                    delta = -5;
+                    desc = `CRISE! Surgiram denúncias e explicações contraditórias envolvendo ${c.nome}. A repercussão foi muito negativa.`;
+                    tweetsGlobal.push({ tempo: `Semana ${semana}`, texto: `URGENTE: crise na campanha de ${c.nome}; intenção de voto despenca após denúncias.` });
+                }
+
+                c.intencao = Math.max(0, c.intencao + delta);
+                const rivaisPrograma = candidatos.filter(outro => !outro.afastado && outro.id !== c.id && outro.perfil && c.perfil && c.perfil.eixos.reduce((s,v,j)=>s+Math.abs(v-outro.perfil.eixos[j]),0)>=7);
+                if (rivaisPrograma.length && Math.random() < 0.28) {
+                    const rival = rivaisPrograma[Math.floor(Math.random()*rivaisPrograma.length)];
+                    desc += ` Também houve divergência de propostas entre ${c.partido} e ${rival.partido}.`;
+                    tweetsGlobal.push({ tempo: `Semana ${semana}`, texto: `Debate de propostas: ${c.nome} (${c.partido}) e ${rival.nome} (${rival.partido}) apresentam visões diferentes sobre o papel do Estado, economia ou pautas sociais.` });
+                }
+                historicoSemanas[semana].push({ candidato: c.nome, texto: desc, delta, antes: intencaoAntes, depois: c.intencao,
+                    resultado: delta > 0 ? "GANHOU INTENÇÃO DE VOTO" : "PERDEU INTENÇÃO DE VOTO" });
+            });
+
+            // Mantém a soma em 100% e impede que uma candidatura ativa apareça com 0,0%.
+            normalizarIntencoesDeVoto(candidatos, 0.2);
+            atualizarInterface();
+            mudarAbaSemana(semana);
+        }
+
+        function acaoPrincipal() {
+            if (etapaAtual >= 1 && etapaAtual <= 5) {
+                // Simula as decisões e consequências da semana atual antes de avançar.
+                gerarEventosSemana(etapaAtual);
+                if (etapaAtual < 5) {
+                    etapaAtual++;
+                    document.getElementById('btn-acao-principal').innerHTML = `<i class="fa-solid fa-play"></i> Simular Semana ${etapaAtual}`;
+                    atualizarInterface();
+                } else {
+                    // Passar para Votação (Semana 6)
+                    etapaAtual = 6;
+                    prepararVotacao();
+                }
+            } else if (etapaAtual === 6 || etapaAtual === 10) {
+                // Iniciar apuração do turno correspondente.
+                iniciarApuracaoVotos();
+            } else if (etapaAtual >= 7 && etapaAtual <= 9) {
+                const semanaSegundoTurno = etapaAtual - 1;
+                gerarEventosSemana(semanaSegundoTurno);
+                if (etapaAtual < 9) {
+                    etapaAtual++;
+                    document.getElementById('fase-titulo').innerText = `2º turno: Semana ${etapaAtual - 6} de 3 — reta final da campanha`;
+                    document.getElementById('btn-acao-principal').innerHTML = `<i class="fa-solid fa-bullhorn"></i> Simular Semana ${etapaAtual - 6} do 2º Turno`;
+                    atualizarInterface();
+                } else {
+                    etapaAtual = 10;
+                    prepararVotacao();
+                }
+            } else if (etapaAtual === 11) {
+                acaoMandatoSemanal();
+            }
+        }
+
+        function mudarAbaSemana(sem) {
+            abaSemanaAtiva = sem;
+            for (let i = 1; i <= 8; i++) {
+                let btn = document.getElementById(`aba-sem-${i}`);
+                if (i === sem) {
+                    btn.className = "px-4 py-2 text-xs font-black rounded-xl bg-amber-500 text-black shadow";
+                } else {
+                    btn.className = "px-4 py-2 text-xs font-black rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700";
+                }
+            }
+
+            let html = "";
+            if (historicoSemanas[sem]) {
+                historicoSemanas[sem].forEach(h => {
+                    let corDelta = h.delta > 0 ? "text-emerald-400" : (h.delta < 0 ? "text-rose-400" : "text-slate-400");
+                    html += `<div class="mb-3 pb-3 border-b border-slate-800 last:border-0"><div class="flex flex-wrap items-center gap-2"><strong class="text-white">${h.candidato}:</strong><span class="text-xs font-black ${corDelta}">${h.resultado}</span><span class="font-mono font-bold ${corDelta}">${h.delta >= 0 ? '+' : ''}${h.delta} ponto(s)</span></div><div class="mt-1">${h.texto}</div><div class="text-xs text-slate-400 mt-1">Intenção antes: ${h.antes.toFixed(1)}% · depois: ${h.depois.toFixed(1)}%</div></div>`;
+                });
+            }
+            document.getElementById('conteudo-historico-semana').innerHTML = html || "Nenhum evento registrado.";
+        }
+
+        function garantirVencedorUnico(lista) {
+            const ativos = lista.filter(c => !c.afastado);
+            if (ativos.length < 2) return;
+            ativos.sort((a,b) => b.votosAlvo - a.votosAlvo);
+            if (ativos[0].votosAlvo === ativos[1].votosAlvo) {
+                ativos[0].votosAlvo += 1;
+                ativos[1].votosAlvo = Math.max(0, ativos[1].votosAlvo - 1);
+            }
+        }
+
+        // Escala fictícia de notoriedade partidária para equilibrar a simulação.
+        // PT e PL ficam no mesmo patamar alto, portanto ambos podem vencer;
+        // a aleatoriedade, a campanha e os acontecimentos também influenciam o resultado.
+        function notoriedadePartidaria(sigla) {
+            // Peso de popularidade fictício do jogo: partidos mais conhecidos
+            // recebem uma vantagem perceptível, sem garantir a vitória.
+            const pesos = {
+                PT:1.85, PL:1.85, MDB:1.62, PSD:1.56, UNIÃO:1.52, PP:1.48,
+                REPUBLICANOS:1.43, PSB:1.35, PDT:1.32, PSDB:1.30,
+                PSOL:1.12, NOVO:1.10, PV:1.08, PCdoB:1.06, PODE:1.05,
+                REDE:1.02, CIDADANIA:1.00, SOLIDARIEDADE:0.99,
+                AVANTE:0.97, AGIR:0.92, PSTU:0.88, PCO:0.86, PCB:0.86,
+                PRTB:0.91, PMB:0.89, DC:0.89, UP:0.86, MOBILIZA:0.92,
+                PRD:0.96, MISSÃO:0.94
+            };
+            return pesos[String(sigla || '').toUpperCase()] || 0.88;
+        }
+
+        function normalizarIntencoesDeVoto(lista, piso = 0.2) {
+            const ativos = lista.filter(c => !c.afastado);
+            if (!ativos.length) return;
+            // Reserva um piso pequeno para evitar 0,0% por arredondamento em candidaturas ativas.
+            const pisoTotal = Math.min(piso * ativos.length, 25);
+            const restante = 100 - pisoTotal;
+            const soma = ativos.reduce((acc, c) => acc + Math.max(0.001, Number(c.intencao) || 0), 0) || 1;
+            ativos.forEach(c => {
+                c.intencao = Math.round((piso + (Math.max(0.001, Number(c.intencao) || 0) / soma) * restante) * 10) / 10;
+            });
+            // Corrige a diferença de arredondamento para a soma fechar em 100%.
+            const diferenca = Math.round((100 - ativos.reduce((acc, c) => acc + c.intencao, 0)) * 10) / 10;
+            const lider = ativos.reduce((a, b) => a.intencao >= b.intencao ? a : b);
+            lider.intencao = Math.max(piso, Math.round((lider.intencao + diferenca) * 10) / 10);
+            candidatos.filter(c => c.afastado).forEach(c => c.intencao = 0);
+        }
+
+        function inicializarIntencoesDeVoto() {
+            const ativos = candidatos.filter(c => !c.afastado);
+            ativos.forEach(c => {
+                const variacaoInicial = 0.92 + Math.random() * 0.16;
+                const desgaste = c.desgasteIndicacao ? 0.72 : 1;
+                c.intencao = notoriedadePartidaria(c.partido) * variacaoInicial * desgaste;
+            });
+            normalizarIntencoesDeVoto(ativos, 0.2);
+
+        }
+
+        function seloIndicacao(c) {
+            return c && c.indicadoPor
+                ? '<span class="ml-1 inline-block text-[10px] font-bold text-amber-300">Indicado pelo ex-presidente afastado</span>'
+                : '';
+        }
+
+        function prepararVotacao() {
+            document.getElementById('secao-historico-semanas').classList.add('hidden');
+            document.getElementById('fase-tag').innerText = "Votação Nacional em Andamento";
+            document.getElementById('fase-titulo').innerText = `${turnosAtuais}º Turno das Eleições Presidenciais`;
+            document.getElementById('fase-desc').innerText = turnosAtuais === 2
+                ? 'As três semanas extras de campanha terminaram. As urnas do 2º turno estão abertas para a votação decisiva!'
+                : 'As urnas eletrônicas foram abertas para 214 milhões de eleitores em todo o país. Clique em iniciar apuração!';
+            document.getElementById('btn-acao-principal').innerHTML = `<i class="fa-solid fa-calculator"></i> Iniciar Apuração ${turnosAtuais}º Turno`;
+
+            // A apuração parte diretamente das intenções exibidas na tela.
+            // A margem de variação é pequena e não permite que uma candidatura sem apoio
+            // ultrapasse concorrentes que aparecem claramente à sua frente na pesquisa.
+            const elegiveis = candidatos.filter(c => !c.afastado);
+            normalizarIntencoesDeVoto(elegiveis, 0.2);
+            const estimativas = elegiveis.map(c => ({
+                candidato: c,
+                peso: Math.max(0.2, c.intencao) * (0.97 + Math.random() * 0.06)
+            }));
+            const somaPesos = estimativas.reduce((acc, item) => acc + item.peso, 0) || 1;
+            const totalValidosEst = ELEITORADO_TOTAL * 0.82;
+            candidatos.forEach(c => {
+                const item = estimativas.find(x => x.candidato.id === c.id);
+                c.votosAlvo = item ? Math.floor(totalValidosEst * item.peso / somaPesos) : 0;
+                c.votos = 0;
+            });
+            garantirVencedorUnico(elegiveis);
+
+            atualizarInterface();
+        }
+
+        function iniciarApuracaoVotos() {
+            if (emApuracao) return;
+            emApuracao = true;
+            votosApurados = 0;
+            document.getElementById('btn-acao-principal').classList.add('hidden');
+
+            // Taxas de salto mais suaves para subirem de pouco em pouco
+            let tempoMs = Math.max(15, Math.floor(60 / velocidade));
+            intervaloApuracao = setInterval(processarPassoApuracao, tempoMs);
+        }
+
+        function processarPassoApuracao() {
+            // Incremento controlado para garantir subida gradual e fluida de pouco em pouco
+            let incremento = Math.floor(ELEITORADO_TOTAL * 0.0035);
+            votosApurados += incremento;
+
+            if (votosApurados >= ELEITORADO_TOTAL) {
+                votosApurados = ELEITORADO_TOTAL;
+                clearInterval(intervaloApuracao);
+                emApuracao = false;
+                apuracaoConcluida = true;
+                finalizarApuracao();
+            }
+
+            let pct = votosApurados / ELEITORADO_TOTAL;
+            candidatos.forEach(c => {
+                c.votos = Math.floor(c.votosAlvo * pct);
+            });
+
+            atualizarInterface();
+        }
+
+        function finalizarApuracao() {
+            // Calcular vitória nos estados com base em votos ponderados por estado
+            distribuirEstadosMapa();
+
+            // Ordenar por votos
+            let ordenados = [...candidatos].sort((a, b) => b.votos - a.votos);
+            let totalValidos = ordenados.reduce((acc, c) => acc + c.votos, 0) || 1;
+            let primeiro = ordenados[0];
+            let pctPrimeiro = (primeiro.votos / totalValidos) * 100;
+
+            if (turnosAtuais === 1) {
+                // Mantém a apuração do 1º turno intacta para o jogador revisar mapa,
+                // classificação, votos e percentuais antes de avançar.
+                const botaoContinuar = document.getElementById('btn-continuar-primeiro-turno');
+                if (pctPrimeiro > 50.0) {
+                    transicaoPrimeiroTurnoPendente = {
+                        tipo: 'vitoria-primeiro-turno',
+                        vencedor: primeiro,
+                        percentual: pctPrimeiro
+                    };
+                    document.getElementById('texto-btn-continuar-primeiro-turno').innerText = 'Continuar para o mandato';
+                } else {
+                    const segundo = ordenados[1];
+                    transicaoPrimeiroTurnoPendente = {
+                        tipo: 'segundo-turno',
+                        primeiro,
+                        segundo
+                    };
+                    document.getElementById('texto-btn-continuar-primeiro-turno').innerText = 'Continuar para o 2º turno';
+                }
+                botaoContinuar.classList.remove('hidden');
+                atualizarInterface();
+                        } else {
+                // Fim do 2º Turno
+                presidenteEleito = primeiro;
+                alertBox(`FIM DA APURAÇÃO - 2º TURNO!\n\n${primeiro.nome} (${primeiro.partido}) venceu o 2º Turno com ${pctPrimeiro.toFixed(2)}% dos votos válidos e é o novo Presidente do Brasil!`, "Presidente Eleito!");
+                iniciarMandatoPresidencial();
+            }
+        }
+
+        function continuarAposPrimeiroTurno() {
+            if (!transicaoPrimeiroTurnoPendente) return;
+            const transicao = transicaoPrimeiroTurnoPendente;
+            transicaoPrimeiroTurnoPendente = null;
+            document.getElementById('btn-continuar-primeiro-turno').classList.add('hidden');
+
+            if (transicao.tipo === 'vitoria-primeiro-turno') {
+                presidenteEleito = transicao.vencedor;
+                iniciarMandatoPresidencial();
+                return;
+            }
+
+            const primeiro = transicao.primeiro;
+            const segundo = transicao.segundo;
+            turnosAtuais = 2;
+            document.getElementById('turno-badge').innerText = '2º Turno';
+            etapaAtual = 7;
+
+            // Só agora os demais candidatos deixam a disputa; até este clique,
+            // o mapa e a classificação completos do 1º turno permanecem visíveis.
+            const finalistas = [primeiro, segundo];
+            candidatos.forEach(c => {
+                if (c.id !== primeiro.id && c.id !== segundo.id) {
+                    c.afastado = true;
+                    c.votosAlvo = 0;
+                    c.votos = 0;
+                    c.intencao = 0;
+                } else {
+                    c.afastado = false;
+                    c.votosAlvo = 0;
+                    c.votos = 0;
+                }
+            });
+            normalizarIntencoesDeVoto(finalistas, 0.2);
+            garantirVencedorUnico(finalistas);
+            votosApurados = 0;
+            apuracaoConcluida = false;
+            historicoSemanas[6] = [];
+            historicoSemanas[7] = [];
+            historicoSemanas[8] = [];
+            document.getElementById('secao-historico-semanas').classList.remove('hidden');
+            document.getElementById('titulo-historico-campanha').innerHTML = '<i class="fa-solid fa-bullhorn text-amber-400"></i> Campanha do 2º turno — três semanas decisivas';
+            document.getElementById('fase-tag').innerText = 'Campanha do 2º Turno';
+            document.getElementById('fase-titulo').innerText = '2º turno: Semana 1 de 3 — a disputa recomeça';
+            document.getElementById('fase-desc').innerText = 'Os dois candidatos finalistas terão mais três semanas para apresentar propostas, participar de debates e conquistar votos antes da decisão final.';
+            document.getElementById('btn-acao-principal').innerHTML = '<i class="fa-solid fa-bullhorn"></i> Simular Semana 1 do 2º Turno';
+            document.getElementById('btn-acao-principal').classList.remove('hidden');
+            mudarAbaSemana(6);
+            atualizarInterface();
+        }
+
+        function distribuirEstadosMapa() {
+            // No modo governamental, a apuração territorial considera somente o estado escolhido.
+            candidatos.forEach(c => c.estadoVitorias = 0);
+            ESTADOS_BRASIL.forEach(est => est.vencedor = null);
+
+            const disponiveis = candidatos.filter(c => !c.afastado && c.votos > 0);
+            if (disponiveis.length === 0) return;
+            const somaV = disponiveis.reduce((acc, c) => acc + c.votos, 0);
+
+            if (modoEleitoral === 'governamental') {
+                const estado = ESTADOS_BRASIL.find(e => e.sigla === estadoGovernamentalSelecionado);
+                if (!estado) return;
+                const sorteio = Math.random() * somaV;
+                let acumulado = 0;
+                let vencedor = disponiveis[disponiveis.length - 1];
+                for (const candidato of disponiveis) {
+                    acumulado += candidato.votos;
+                    if (sorteio < acumulado) { vencedor = candidato; break; }
+                }
+                vencedor.estadoVitorias = 1;
+                estado.vencedor = vencedor;
+                return;
+            }
+
+            ESTADOS_BRASIL.forEach(est => {
+                const sorteio = Math.random() * somaV;
+                let acumulado = 0;
+                let vencedor = disponiveis[disponiveis.length - 1];
+                for (const candidato of disponiveis) {
+                    acumulado += candidato.votos;
+                    if (sorteio < acumulado) { vencedor = candidato; break; }
+                }
+                vencedor.estadoVitorias++;
+                est.vencedor = vencedor;
+            });
+        }
+
+        function iniciarMandatoPresidencial() {
+            emMandato = true;
+            semanaMandato = 1;
+            etapaAtual = 11;
+            document.getElementById('fase-tag').innerText = "Mandato Presidencial em Andamento";
+            document.getElementById('fase-titulo').innerText = `Governo ${presidenteEleito.nome} (${presidenteEleito.partido})`;
+            document.getElementById('fase-desc').innerText = `O presidente assumiu o cargo. A cada semana, aprove leis, discursos e decisões para manter sua aprovação alta.`;
+            document.getElementById('btn-acao-principal').innerHTML = `<i class="fa-solid fa-forward"></i> Avançar Semana ${semanaMandato} do Mandato`;
+            document.getElementById('btn-acao-principal').classList.remove('hidden');
+            document.getElementById('btn-impeachment').classList.remove('hidden');
+            document.getElementById('badge-nota-governo').classList.remove('hidden');
+            document.getElementById('secao-historico-mandato').classList.remove('hidden');
+            historicoMandato = [];
+            historicoDiscursos = [];
+            historicoLeis = [];
+            renderizarHistoricoMandato();
+            renderizarHistoricosPresidenciais();
+            atualizarInterface();
+        }
+
+        function renderizarHistoricoMandato() {
+            const area = document.getElementById('conteudo-historico-mandato');
+            if (!historicoMandato.length) { area.innerHTML = "Nenhuma decisão simulada ainda. Avance uma semana do mandato para ver o que aconteceu."; return; }
+            area.innerHTML = historicoMandato.slice().reverse().map(item => {
+                const cor = item.delta > 0 ? "text-emerald-400" : (item.delta < 0 ? "text-rose-400" : "text-slate-300");
+                const status = item.delta > 0 ? "GANHOU APROVAÇÃO" : (item.delta < 0 ? "PERDEU APROVAÇÃO" : "APROVAÇÃO ESTÁVEL");
+                return `<div class="mb-3 pb-3 border-b border-slate-800 last:border-0"><div class="flex flex-wrap items-center gap-2"><strong class="text-white">Semana ${item.semana}:</strong><span class="text-xs font-black ${cor}">${status}</span><span class="font-mono font-black ${cor}">${item.delta > 0 ? "+" : ""}${item.delta} ponto(s)</span></div><div class="mt-1">${item.acao}</div><div class="text-xs text-slate-400 mt-1">Aprovação: ${item.antes}/100 → ${item.depois}/100</div></div>`;
+            }).join("");
+        }
+
+        function renderizarHistoricosPresidenciais() {
+            const areaDiscursos = document.getElementById('conteudo-historico-discursos');
+            const areaLeis = document.getElementById('conteudo-historico-leis');
+            if (areaDiscursos) {
+                areaDiscursos.innerHTML = historicoDiscursos.length
+                    ? historicoDiscursos.slice().reverse().map(item => `<article class="mb-3 pb-3 border-b border-slate-800 last:border-0"><div class="flex flex-wrap items-center gap-2 mb-1"><strong class="text-sky-300">Semana ${item.semana}</strong><span class="text-[10px] text-slate-500">Discurso oficial</span></div><p class="text-slate-200">${item.titulo}</p><p class="text-slate-400 mt-1">${item.texto}</p></article>`).join('')
+                    : 'Nenhum discurso realizado ainda.';
+            }
+            if (areaLeis) {
+                areaLeis.innerHTML = historicoLeis.length
+                    ? historicoLeis.slice().reverse().map(item => `<article class="mb-3 pb-3 border-b border-slate-800 last:border-0"><div class="flex flex-wrap items-center gap-2 mb-1"><strong class="text-emerald-300">Semana ${item.semana}</strong><span class="text-[10px] font-black text-emerald-400">APROVADA</span></div><p class="text-slate-200">${item.titulo}</p><p class="text-slate-400 mt-1">${item.texto}</p></article>`).join('')
+                    : 'Nenhuma lei aprovada ainda.';
+            }
+        }
+
+        function acaoMandatoSemanal() {
+            if (semanaMandato < 10) {
+                semanaMandato++;
+                const positivas = ["entregou novas unidades de saúde e ampliou o atendimento.", "anunciou um programa de qualificação profissional.", "concluiu obras de infraestrutura dentro do prazo.", "negociou um acordo para ampliar investimentos em educação."];
+                const negativas = ["enfrentou atrasos em obras públicas importantes.", "teve uma proposta rejeitada após falhas de articulação política.", "registrou problemas na execução de um programa público.", "enfrentou uma crise após declarações controversas de um ministro."];
+                const sorteio = Math.random();
+                let deltaNota = 0, acaoFeita = "";
+                if (sorteio < 0.48) { deltaNota = Math.floor(Math.random() * 5) + 1; acaoFeita = positivas[Math.floor(Math.random() * positivas.length)]; }
+                else if (sorteio < 0.90) { deltaNota = -(Math.floor(Math.random() * 5) + 1); acaoFeita = negativas[Math.floor(Math.random() * negativas.length)]; }
+                else { deltaNota = Math.random() < 0.5 ? 0 : -7; acaoFeita = deltaNota < 0 ? "uma crise política grave dominou a semana." : "manteve a agenda sem mudanças relevantes."; }
+                // A cada semana o presidente realiza um discurso e sanciona uma lei simulada.
+                const discursos = [
+                    { titulo: "Pronunciamento à nação", texto: "O presidente apresentou as prioridades do governo e pediu diálogo entre os poderes." },
+                    { titulo: "Discurso sobre educação", texto: "O presidente anunciou metas para melhorar a aprendizagem e ampliar oportunidades nas escolas." },
+                    { titulo: "Pronunciamento sobre saúde", texto: "O presidente destacou ações para fortalecer o atendimento público e reduzir filas." },
+                    { titulo: "Discurso de desenvolvimento", texto: "O presidente defendeu investimentos, geração de empregos e crescimento econômico." },
+                    { titulo: "Pronunciamento sobre infraestrutura", texto: "O presidente apresentou projetos de mobilidade, saneamento e obras em diferentes regiões." },
+                    { titulo: "Discurso de prestação de contas", texto: "O presidente fez um balanço das ações do governo e respondeu às cobranças da população." }
+                ];
+                const leis = [
+                    { titulo: "Lei de incentivo à educação", texto: "Cria medidas de apoio à permanência dos estudantes e à melhoria da infraestrutura escolar." },
+                    { titulo: "Lei de fortalecimento da atenção básica", texto: "Amplia programas de prevenção e estruturação das unidades de saúde." },
+                    { titulo: "Lei de apoio ao primeiro emprego", texto: "Estabelece incentivos à contratação e à qualificação profissional de jovens." },
+                    { titulo: "Lei de transparência pública", texto: "Amplia a divulgação de gastos, contratos e indicadores dos programas federais." },
+                    { titulo: "Lei de infraestrutura regional", texto: "Autoriza investimentos em obras de mobilidade, saneamento e integração regional." },
+                    { titulo: "Lei de proteção ambiental", texto: "Estabelece novas medidas de preservação e recuperação de áreas degradadas." },
+                    { titulo: "Lei de apoio aos pequenos negócios", texto: "Simplifica procedimentos e cria instrumentos de incentivo aos pequenos empreendedores." }
+                ];
+                const discursoEscolhido = discursos[Math.floor(Math.random() * discursos.length)];
+                const leiEscolhida = leis[Math.floor(Math.random() * leis.length)];
+                historicoDiscursos.push({ semana: semanaMandato, ...discursoEscolhido });
+                historicoLeis.push({ semana: semanaMandato, ...leiEscolhida });
+                renderizarHistoricosPresidenciais();
+
+                const antes = notaMandato;
+                notaMandato = Math.max(0, Math.min(100, notaMandato + deltaNota));
+                const deltaReal = notaMandato - antes;
+                historicoMandato.push({ semana: semanaMandato, acao: `O presidente ${presidenteEleito.nome} ${acaoFeita}`, antes, depois: notaMandato, delta: deltaReal });
+                tweetsGlobal.push({ tempo: `Mandato Sem. ${semanaMandato}`, texto: `O presidente ${presidenteEleito.nome} ${acaoFeita} A aprovação ${deltaReal >= 0 ? "subiu" : "caiu"} ${Math.abs(deltaReal)} ponto(s), chegando a ${notaMandato}/100.` });
+                renderizarHistoricoMandato();
+                document.getElementById('fase-titulo').innerText = `Governo ${presidenteEleito.nome} (Semana ${semanaMandato}/10)`;
+                document.getElementById('txt-nota-gov').innerText = notaMandato;
+                document.getElementById('btn-acao-principal').innerHTML = `<i class="fa-solid fa-forward"></i> Avançar Semana ${semanaMandato} do Mandato`;
+            } else {
+                alertBox(`Fim do Mandato Presidencial de 10 Semanas!\n\nNota final do governo: ${notaMandato}/100.\nIniciando novo ciclo eleitoral!`, "Fim de Mandato");
+                contarSuspensaoNaProximaEleicao = eleicoesRestantesInelegivel > 0;
+                iniciarNovaEleicao();
+            }
+        }
+
+        // FUNÇÕES DO IMPEACHMENT
+        function abrirModalImpeachment() {
+            if (!emMandato || !presidenteEleito) return;
+            document.getElementById('imp-titulo-pres').innerText = `Presidente Alvo: ${presidenteEleito.nome} (${presidenteEleito.partido})`;
+            document.getElementById('imp-nota-gov').innerText = notaMandato;
+            document.getElementById('placar-sim').innerText = "0";
+            document.getElementById('placar-nao').innerText = "0";
+            document.getElementById('placar-abst').innerText = "0";
+            document.getElementById('btn-continuar-imp').classList.add('hidden');
+            document.getElementById('btn-iniciar-votacao-imp').classList.remove('hidden');
+            impeachmentEmAndamento = false;
+            clearInterval(intervaloImpeachment);
+            
+            // Renderizar exatamente 50 quadrados por fileira (8 fileiras = 400 deputados)
+            let grid = document.getElementById('grid-400-deputados');
+            grid.className = "grid grid-cols-[repeat(50,minmax(0,1fr))] gap-1 max-w-4xl w-full mx-auto";
+            grid.innerHTML = '';
+            for (let i = 0; i < 400; i++) {
+                grid.innerHTML += `<div id="dep-${i}" class="w-3 h-3 bg-slate-700 rounded-sm transition-all duration-200"></div>`;
+            }
+
+            document.getElementById('modal-impeachment').classList.remove('hidden');
+        }
+
+        function fecharModalImpeachment() {
+            clearInterval(intervaloImpeachment);
+            document.getElementById('modal-impeachment').classList.add('hidden');
+        }
+
+        function setVelocidadeImpeachment(fator) {
+            velocidadeImpeachment = fator;
+            let btns = document.querySelectorAll('.imp-vel-btn');
+            btns.forEach(b => {
+                let txt = b.innerText.trim();
+                if ((fator === 0.1 && txt === '0.1x') || (fator === 0.5 && txt === '0.5x') || (fator === 1 && txt === '1x') || 
+                    (fator === 5 && txt === '5x') || (fator === 20 && txt === 'Turbo')) {
+                    b.className = "imp-vel-btn px-2 py-1 text-xs font-black rounded bg-amber-400 text-black";
+                } else {
+                    b.className = "imp-vel-btn px-2 py-1 text-xs font-black rounded bg-slate-800 text-white hover:bg-amber-400 hover:text-black";
+                }
+            });
+
+            if (impeachmentEmAndamento) {
+                clearInterval(intervaloImpeachment);
+                let tempoMs = Math.max(10, Math.floor(80 / fator));
+                intervaloImpeachment = setInterval(processarVotoDeputado, tempoMs);
+            }
+        }
+
+        function iniciarVotacaoImpeachment() {
+            if (impeachmentEmAndamento) return;
+            impeachmentEmAndamento = true;
+            document.getElementById('btn-iniciar-votacao-imp').classList.add('hidden');
+
+            // Com aprovação acima de 30, o impeachment é extremamente improvável.
+            // Com aprovação de 30 ou menos, a chance de votos favoráveis aumenta
+            // progressivamente conforme a aprovação do governo diminui.
+            let probSim;
+            if (notaMandato > 30) {
+                probSim = 0.005; // apenas 0,5% de chance por parlamentar votar SIM
+            } else {
+                probSim = 0.55 + ((30 - notaMandato) / 30) * 0.30;
+                probSim = Math.max(0.55, Math.min(0.85, probSim));
+            }
+            let probNao = 0.85 - probSim;
+
+            deputadosVotos = [];
+            resultadoSim = 0;
+            resultadoNao = 0;
+            resultadoAbst = 0;
+
+            for (let i = 0; i < 400; i++) {
+                let r = Math.random();
+                if (r < probSim) {
+                    deputadosVotos.push('sim');
+                } else if (r < probSim + probNao) {
+                    deputadosVotos.push('nao');
+                } else {
+                    deputadosVotos.push('abst');
+                }
+            }
+
+            indexDeputadoAtual = 0;
+            let tempoMs = Math.max(10, Math.floor(80 / velocidadeImpeachment));
+            intervaloImpeachment = setInterval(processarVotoDeputado, tempoMs);
+        }
+
+        function processarVotoDeputado() {
+            if (indexDeputadoAtual >= 400) {
+                clearInterval(intervaloImpeachment);
+                impeachmentEmAndamento = false;
+                document.getElementById('btn-continuar-imp').classList.remove('hidden');
+                return;
+            }
+
+            let tipoVoto = deputadosVotos[indexDeputadoAtual];
+            let el = document.getElementById(`dep-${indexDeputadoAtual}`);
+            if (el) {
+                if (tipoVoto === 'sim') {
+                    resultadoSim++;
+                    el.className = "w-3 h-3 bg-emerald-500 rounded-sm transition-all duration-200";
+                    document.getElementById('placar-sim').innerText = resultadoSim;
+                } else if (tipoVoto === 'nao') {
+                    resultadoNao++;
+                    el.className = "w-3 h-3 bg-red-500 rounded-sm transition-all duration-200";
+                    document.getElementById('placar-nao').innerText = resultadoNao;
+                } else {
+                    resultadoAbst++;
+                    el.className = "w-3 h-3 bg-slate-400 rounded-sm transition-all duration-200";
+                    document.getElementById('placar-abst').innerText = resultadoAbst;
+                }
+            }
+            indexDeputadoAtual++;
+        }
+
+        function concluirImpeachment() {
+            fecharModalImpeachment();
+            if (resultadoSim > resultadoNao) {
+                alertBox(`IMPEACHMENT APROVADO NO CONGRESSO!\n\nPlacar Final:\nSim: ${resultadoSim}\nNão: ${resultadoNao}\nAbstenções: ${resultadoAbst}\n\nA maioria votou SIM. O Presidente ${presidenteEleito.nome} foi afastado do cargo pelo Congresso Nacional!`, "Impeachment Aprovado");
+                document.getElementById('btn-impeachment').classList.add('hidden');
+                exPresidenteInelegivelId = presidenteEleito.id;
+                eleicoesRestantesInelegivel = 2;
+                contarSuspensaoNaProximaEleicao = false;
+                const nomesDeIndicados = [
+                    "Eduardo Nogueira", "Renata Almeida", "Carlos Valença",
+                    "Patrícia Monteiro", "André Vasconcelos", "Helena Duarte",
+                    "Marcelo Tavares", "Beatriz Campos"
+                ];
+                const nomeNovo = nomesDeIndicados[Math.floor(Math.random() * nomesDeIndicados.length)];
+                const partidoDoExPresidente = presidenteEleito.partido;
+                const numeroDoExPresidente = presidenteEleito.num;
+                const novoIdIndicado = Math.max(0, ...configuracaoCandidatos.map(c => Number(c.id) || 0), ...candidatos.map(c => Number(c.id) || 0)) + 1;
+                indicadoDoExPresidenteId = novoIdIndicado;
+                indicadoExternoDados = {
+                    id: novoIdIndicado,
+                    nome: nomeNovo,
+                    partido: partidoDoExPresidente,
+                    num: numeroDoExPresidente,
+                    cor: corDoPartido(partidoDoExPresidente),
+                    perfil: PARTIDOS[partidoDoExPresidente],
+                    indicadoPor: "Indicado pelo ex-presidente afastado"
+                };
+                const nomeIndicado = nomeNovo;
+                tweetsGlobal.push({ tempo: "Impeachment", texto: `${presidenteEleito.nome} sofreu impeachment e ficará inelegível pelas próximas duas eleições. Indicou ${nomeIndicado} para representá-lo nesse período.` });
+                iniciarNovaEleicao();
+            } else {
+                alertBox(`IMPEACHMENT REJEITADO!\n\nA maioria votou NÃO. Placar Final:\nSim: ${resultadoSim}\nNão: ${resultadoNao}\nAbstenções: ${resultadoAbst}\n\nO Presidente ${presidenteEleito.nome} manteve o mandato!`, "Impeachment Rejeitado");
+            }
+        }
+
+        function setVelocidade(fator) {
+            velocidade = fator;
+            let btns = document.querySelectorAll('.vel-btn');
+            btns.forEach(b => {
+                let txt = b.innerText.trim();
+                if ((fator === 0.1 && txt === '0.1x') || (fator === 0.5 && txt === '0.5x') || (fator === 1 && txt === '1x') || 
+                    (fator === 5 && txt === '5x') || (fator === 20 && txt === 'Turbo')) {
+                    b.className = "vel-btn px-2 py-1 text-xs font-black rounded bg-amber-400 text-black";
+                } else {
+                    b.className = "vel-btn px-2 py-1 text-xs font-black rounded bg-slate-800 text-white hover:bg-amber-400 hover:text-black";
+                }
+            });
+
+            if (emApuracao) {
+                clearInterval(intervaloApuracao);
+                let tempoMs = Math.max(10, Math.floor(100 / (fator * 2)));
+                intervaloApuracao = setInterval(processarPassoApuracao, tempoMs);
+            }
+        }
+
+        function atualizarInterface() {
+            let pctApurado = ((votosApurados / ELEITORADO_TOTAL) * 100).toFixed(1);
+            document.getElementById('urnas-porcent').innerText = pctApurado + "%";
+
+            // Estatísticas Demográficas
+            let totalVal = candidatos.reduce((acc, c) => acc + c.votos, 0);
+            let brancos = Math.floor(votosApurados * 0.06);
+            let nulos = Math.floor(votosApurados * 0.08);
+            let abst = Math.floor(ELEITORADO_TOTAL * 0.18) - Math.floor(votosApurados * 0.05);
+
+            document.getElementById('stat-validos').innerText = (totalVal).toLocaleString('pt-BR');
+            document.getElementById('stat-brancos').innerText = (brancos).toLocaleString('pt-BR');
+            document.getElementById('stat-nulos').innerText = (nulos).toLocaleString('pt-BR');
+            document.getElementById('stat-abst').innerText = Math.max(0, abst).toLocaleString('pt-BR');
+
+            // Ordenar candidatos
+            let ativos = [...candidatos].filter(c => !c.afastado);
+            ativos.sort((a, b) => {
+                if (votosApurados > 0) return b.votos - a.votos;
+                return b.intencao - a.intencao;
+            });
+
+            // Atualiza rótulo do Top 1 durante a apuração
+            if (etapaAtual >= 6 && votosApurados > 0) {
+                document.getElementById('top1-status-label').innerText = "Votação em Tempo Real";
+            } else {
+                document.getElementById('top1-status-label').innerText = "Intenção de Voto";
+            }
+
+            // Top 1 (2 primeiros)
+            let top2Html = "";
+            for (let i = 0; i < Math.min(2, ativos.length); i++) {
+                let c = ativos[i];
+                let baseVotacao = (etapaAtual >= 6 && votosApurados > 0) ? candidatos.reduce((acc, cand) => acc + cand.votosAlvo, 0) : 100;
+                let valor = (etapaAtual >= 6 && votosApurados > 0) ? c.votos : c.intencao;
+                let pct = baseVotacao > 0 ? ((valor / baseVotacao) * 100).toFixed(1) : "0.0";
+
+                top2Html += `
+                    <div class="glass-card p-4 rounded-xl flex items-center justify-between border-l-4" style="border-left-color: ${c.cor}">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs font-black bg-slate-800 text-slate-300 px-2.5 py-1 rounded-lg">#${i+1}</span>
+                            <div>
+                                <h4 class="font-black text-white text-base">${c.nome}</h4>${seloIndicacao(c)}<p class="text-xs text-slate-400">${c.partido} · Nº ${c.num}</p>
+                                <p class="text-xs text-slate-400 mt-1">${(etapaAtual >= 6 && votosApurados > 0) ? c.votos.toLocaleString('pt-BR') + ' votos' : 'Intenção: ' + c.intencao + '%'}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xl font-black font-mono text-white">${pct}%</span>
+                        </div>
+                    </div>
+                `;
+            }
+            document.getElementById('container-top-2').innerHTML = top2Html || "<p class='text-xs text-slate-400'>Sem candidatos ativos.</p>";
+
+            // Top 2 (Todos os candidatos)
+            let top5Html = "";
+            ativos.forEach((c, idx) => {
+                let baseVotacao = (etapaAtual >= 6 && votosApurados > 0) ? candidatos.reduce((acc, cand) => acc + cand.votosAlvo, 0) : 100;
+                let valor = (etapaAtual >= 6 && votosApurados > 0) ? c.votos : c.intencao;
+                let pct = baseVotacao > 0 ? ((valor / baseVotacao) * 100).toFixed(1) : "0.0";
+
+                top5Html += `
+                    <div class="flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs font-black w-6 h-6 rounded-full flex items-center justify-center bg-slate-800 text-slate-300">#${idx+1}</span>
+                            <div>
+                                <h5 class="font-bold text-white text-sm">${c.nome} <span class="text-xs text-slate-400">(${c.partido} · Nº ${c.num})</span></h5>${seloIndicacao(c)}
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm font-black font-mono text-white">${pct}%</span>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('lista-top-5').innerHTML = top5Html;
+        }
+
+        function abrirModalRedeSocial() {
+            let html = "";
+            let tweetsExibir = tweetsGlobal.length > 0 ? tweetsGlobal : [
+                { tempo: "Agora", texto: "A eleição está pegando fogo! Quem será que vai levar a presidência?" },
+                { tempo: "Ontem", texto: "Debate ontem foi tenso demais, candidatos não aliviaram." }
+            ];
+
+            tweetsExibir.forEach(t => {
+                html += `
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-bold text-sky-400"><i class="fa-brands fa-x-twitter"></i> Eleitor Brasileiro</span>
+                            <span class="text-[10px] text-slate-500">${t.tempo}</span>
+                        </div>
+                        <p class="text-sm text-slate-200">${t.texto}</p>
+                    </div>
+                `;
+            });
+            document.getElementById('feed-tweets').innerHTML = html;
+            document.getElementById('modal-rede-social').classList.remove('hidden');
+        }
+
+        function fecharModalRedeSocial() {
+            document.getElementById('modal-rede-social').classList.add('hidden');
+        }
+
+        let geoEstadosBrasilCache = null;
+        const geoMunicipiosEstadoCache = {};
+        let carregandoMapaBrasil = false;
+
+        const CODIGOS_IBGE_UF = { AC: 12, AL: 27, AP: 16, AM: 13, BA: 29, CE: 23, DF: 53, ES: 32, GO: 52, MA: 21, MT: 51, MS: 50, MG: 31, PA: 15, PB: 25, PR: 41, PE: 26, PI: 22, RJ: 33, RN: 24, RS: 43, RO: 11, RR: 14, SC: 42, SP: 35, SE: 28, TO: 17 };
+
+        async function carregarScriptMapa(src, globalName) {
+            if (window[globalName]) return true;
+            const existente = [...document.scripts].find(s => s.src === src);
+            if (existente) {
+                await new Promise((resolve, reject) => {
+                    if (window[globalName]) return resolve();
+                    existente.addEventListener('load', resolve, { once: true });
+                    existente.addEventListener('error', reject, { once: true });
+                });
+                return true;
+            }
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = () => reject(new Error('Falha ao carregar biblioteca: ' + globalName));
+                document.head.appendChild(script);
+            });
+            if (!window[globalName]) throw new Error('Biblioteca não inicializada: ' + globalName);
+            return true;
+        }
+
+        async function carregarBibliotecaMapa() {
+            await carregarScriptMapa('https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js', 'd3');
+            await carregarScriptMapa('https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js', 'topojson');
+        }
+
+        async function obterGeoEstadosBrasil() {
+            if (geoEstadosBrasilCache) return geoEstadosBrasilCache;
+
+            // TopoJSON simplificado dos 26 estados + DF. O identificador de cada
+            // geometria é a própria sigla da UF (AC, AL, ..., TO).
+            const fontes = [
+                'https://gist.githubusercontent.com/ppKrauss/0c33364240e841fa23e78b21005f792c/raw/153641252fe5e6499f12373b0789565e822e5ef2/br-states.json'
+            ];
+            let ultimoErro = null;
+            for (const url of fontes) {
+                try {
+                    const resposta = await fetch(url, { cache: 'no-cache' });
+                    if (!resposta.ok) throw new Error('HTTP ' + resposta.status);
+                    const topo = await resposta.json();
+                    if (topo.type !== 'Topology' || !topo.objects?.estados) {
+                        throw new Error('Arquivo territorial não é um TopoJSON válido.');
+                    }
+                    const convertido = topojson.feature(topo, topo.objects.estados);
+                    if (!convertido || !Array.isArray(convertido.features) || convertido.features.length !== 27) {
+                        throw new Error('O mapa não contém as 27 UFs.');
+                    }
+                    convertido.features.forEach(f => {
+                        f.properties = f.properties || {};
+                        f.properties.sigla = String(f.id || f.properties.sigla || '').toUpperCase();
+                        f.properties.nome = f.properties.nome || f.properties.name || f.properties.sigla;
+                    });
+                    geoEstadosBrasilCache = convertido;
+                    return geoEstadosBrasilCache;
+                } catch (erro) {
+                    ultimoErro = erro;
+                }
+            }
+            throw ultimoErro || new Error('Não foi possível carregar os limites territoriais.');
+        }
+
+        async function obterGeoMunicipiosEstado(siglaUF) {
+            if (geoMunicipiosEstadoCache[siglaUF]) return geoMunicipiosEstadoCache[siglaUF];
+
+            // Camada municipal baseada na malha territorial do IBGE (serviço ArcGIS).
+            // Diferente da resposta agregada da API de malhas, esta consulta retorna
+            // uma feição/polígono independente para cada município.
+            const base = 'https://services5.arcgis.com/eJPAJ2dw9QRV3FGc/ArcGIS/rest/services/Limites_geogr%C3%A1ficos_IBGE_2022/FeatureServer/2/query';
+            const url = new URL(base);
+            url.searchParams.set('where', `SIGLA_UF = '${siglaUF}'`);
+            url.searchParams.set('outFields', 'CD_MUN,NM_MUN,SIGLA_UF');
+            url.searchParams.set('returnGeometry', 'true');
+            url.searchParams.set('outSR', '4326');
+            url.searchParams.set('f', 'geojson');
+
+            const resposta = await fetch(url.toString(), { cache: 'force-cache' });
+            if (!resposta.ok) throw new Error(`Não foi possível carregar os municípios (HTTP ${resposta.status}).`);
+            const geo = await resposta.json();
+            if (geo.type !== 'FeatureCollection' || !Array.isArray(geo.features) || !geo.features.length) {
+                throw new Error('O serviço territorial não retornou os polígonos municipais deste estado.');
+            }
+
+            geo.features = geo.features.filter(feature => feature && feature.geometry &&
+                ['Polygon', 'MultiPolygon'].includes(feature.geometry.type));
+            if (!geo.features.length) throw new Error('Os limites municipais recebidos não contêm polígonos válidos.');
+
+            geo.features.forEach((feature, indice) => {
+                feature.properties = feature.properties || {};
+                feature.properties.nomeMunicipio = feature.properties.NM_MUN || feature.properties.nomeMunicipio || `Município ${indice + 1}`;
+                feature.properties.codigoMunicipio = String(feature.properties.CD_MUN || '');
+            });
+
+            geoMunicipiosEstadoCache[siglaUF] = geo;
+            return geo;
+        }
+
+        async function renderizarMapaTerritorialBrasil() {
+            const area = document.getElementById('grid-estados-brasil');
+            if (carregandoMapaBrasil) return;
+            carregandoMapaBrasil = true;
+            area.innerHTML = '<p class="text-slate-400 text-sm py-12">Carregando limites territoriais oficiais...</p>';
+            try {
+                await carregarBibliotecaMapa();
+                const estadoSelecionado = ESTADOS_BRASIL.find(e => e.sigla === estadoGovernamentalSelecionado);
+                const modoEstado = modoEleitoral === 'governamental' && !!estadoSelecionado;
+                let geojson;
+                if (modoEstado) {
+                    geojson = await obterGeoMunicipiosEstado(estadoSelecionado.sigla);
+                } else {
+                    geojson = await obterGeoEstadosBrasil();
+                }
+                if (!geojson.features.length) throw new Error('Não foram encontrados territórios para exibir no mapa.');
+
+                const largura = 1000;
+                const altura = 720;
+                const margem = modoEstado ? 18 : 22;
+                const svg = d3.create('svg')
+                    .attr('viewBox', `0 0 ${largura} ${altura}`)
+                    .attr('preserveAspectRatio', 'xMidYMid meet')
+                    .attr('role', 'img')
+                    .attr('aria-label', modoEstado ? `Mapa de ${geojson.features.length} municípios do estado de ${estadoSelecionado.nome}, com limites territoriais do IBGE` : 'Mapa do território do Brasil dividido em 27 unidades da federação')
+                    .attr('class', 'w-full h-auto');
+                const projecao = d3.geoMercator().fitExtent([[margem, margem], [largura - margem, altura - margem]], geojson);
+                const caminho = d3.geoPath(projecao);
+                const estadoVencedor = modoEstado ? estadoSelecionado.vencedor : null;
+                const porSigla = Object.fromEntries(ESTADOS_BRASIL.map(e => [e.sigla, e]));
+                const obterSiglaUF = feature => String(feature.id || feature.properties?.sigla || '').toUpperCase();
+
+                svg.append('g').selectAll('path')
+                    .data(geojson.features)
+                    .join('path')
+                    .attr('d', caminho)
+                    .attr('fill', feature => {
+                        if (modoEstado) return estadoVencedor?.cor || '#475569';
+                        const estado = porSigla[obterSiglaUF(feature)];
+                        return estado?.vencedor?.cor || '#475569';
+                    })
+                    .attr('fill-opacity', 1)
+                    .attr('stroke', modoEstado ? '#e2e8f0' : '#e2e8f0')
+                    .attr('stroke-width', modoEstado ? 1.15 : 1.5)
+                    .attr('stroke-linejoin', 'round')
+                    .style('cursor', 'pointer')
+                    .append('title')
+                    .text(feature => {
+                        if (modoEstado) return `${feature.properties?.nomeMunicipio || 'Município'} — ${estadoVencedor?.nome || 'Apuração pendente'} (${estadoSelecionado.sigla})`;
+                        const sigla = obterSiglaUF(feature);
+                        const estado = porSigla[sigla];
+                        return `${estado?.nome || feature.properties?.nome || sigla} (${sigla}) — ${estado?.vencedor?.nome || 'Apuração pendente'}`;
+                    });
+
+                if (!modoEstado) {
+                    svg.append('g').selectAll('text')
+                        .data(geojson.features)
+                        .join('text')
+                        .attr('x', feature => caminho.centroid(feature)[0])
+                        .attr('y', feature => caminho.centroid(feature)[1] + 5)
+                        .attr('text-anchor', 'middle')
+                        .attr('font-size', feature => ['DF', 'SE', 'AL', 'ES'].includes(obterSiglaUF(feature)) ? 9 : 13)
+                        .attr('font-weight', 900)
+                        .attr('fill', '#ffffff')
+                        .attr('stroke', '#0f172a')
+                        .attr('stroke-width', 3)
+                        .attr('paint-order', 'stroke')
+                        .style('pointer-events', 'none')
+                        .text(obterSiglaUF);
+                }
+
+                area.innerHTML = '';
+                area.classList.toggle('max-w-3xl', !modoEstado);
+                area.classList.toggle('max-w-5xl', modoEstado);
+                area.appendChild(svg.node());
+                if (modoEstado) {
+                    const fonte = document.createElement('p');
+                    fonte.className = 'text-center text-[10px] text-slate-500 mt-2';
+                    fonte.textContent = `${geojson.features.length} municípios • Limites territoriais: IBGE • Passe o cursor sobre um município para ver o nome`;
+                    area.appendChild(fonte);
+                }
+            } catch (erro) {
+                console.error('Erro ao renderizar mapa territorial:', erro);
+                area.innerHTML = '<div class="text-center py-10"><p class="text-red-400 font-bold">Não foi possível carregar o mapa territorial.</p><p class="text-slate-400 text-xs mt-2">O mapa municipal usa as malhas oficiais do IBGE e precisa de conexão com a internet. Verifique a conexão e tente novamente.</p><button onclick="renderizarMapaTerritorialBrasil()" class="mt-4 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold">Tentar novamente</button></div>';
+            } finally {
+                carregandoMapaBrasil = false;
+            }
+        }
+
+        function abrirModalMapa() {
+            let legendaHtml = '';
+            const estadoGov = ESTADOS_BRASIL.find(e => e.sigla === estadoGovernamentalSelecionado);
+            const tituloMapa = document.getElementById('titulo-modal-mapa');
+            const descricaoMapa = document.getElementById('descricao-modal-mapa');
+            const ajudaMapa = document.getElementById('ajuda-modal-mapa');
+            if (modoEleitoral === 'governamental' && estadoGov) {
+                if (tituloMapa) tituloMapa.textContent = `Mapa Eleitoral de ${estadoGov.nome} (${estadoGov.sigla})`;
+                if (descricaoMapa) descricaoMapa.textContent = `Todos os municípios de ${estadoGov.nome}, separados pelos limites territoriais oficiais do IBGE.`;
+                if (ajudaMapa) ajudaMapa.textContent = `Cada divisão representa um município. Passe o cursor sobre uma área para ver o nome do município e o candidato vencedor no estado.`;
+            } else {
+                if (tituloMapa) tituloMapa.textContent = 'Mapa Eleitoral do Brasil (27 UFs)';
+                if (descricaoMapa) descricaoMapa.textContent = 'Território brasileiro dividido pelos limites reais dos 26 estados e do Distrito Federal. No 2º turno, somente os dois finalistas aparecem nas cores e na contagem de UFs.';
+                if (ajudaMapa) ajudaMapa.textContent = 'Passe o cursor sobre um estado para ver o nome e o candidato que está vencendo nele.';
+            }
+            // No segundo turno, a legenda mostra exclusivamente os dois finalistas.
+            const candidatosNaLegenda = turnosAtuais === 2
+                ? candidatos.filter(c => !c.afastado)
+                : candidatos.filter(c => !c.afastado);
+
+            candidatosNaLegenda.forEach(c => {
+                legendaHtml += `
+                    <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+                        <span class="w-3 h-3 rounded-full" style="background-color: ${c.cor}"></span>
+                        <span class="text-xs font-bold text-white">${c.nome}: <span class="font-mono text-amber-400">${modoEleitoral === 'governamental' ? (c.estadoVitorias ? 'Vence no estado' : 'Sem vitória') : `${c.estadoVitorias || 0} UFs`}</span></span>
+                    </div>
+                `;
+            });
+            document.getElementById('legenda-mapa-estados').innerHTML = legendaHtml;
+            document.getElementById('modal-mapa').classList.remove('hidden');
+            renderizarMapaTerritorialBrasil();
+        }
+
+        function fecharModalMapa() {
+            document.getElementById('modal-mapa').classList.add('hidden');
+        }
+
+        function acaoPrincipal() {
+            if (etapaAtual >= 1 && etapaAtual <= 5) {
+                // Cada clique simula as decisões de todos os candidatos naquela semana.
+                gerarEventosSemana(etapaAtual);
+                if (etapaAtual < 5) {
+                    etapaAtual++;
+                    document.getElementById('btn-acao-principal').innerHTML = `<i class="fa-solid fa-play"></i> Simular Semana ${etapaAtual}`;
+                    atualizarInterface();
+                    mudarAbaSemana(etapaAtual);
+                } else {
+                    etapaAtual = 6;
+                    prepararVotacao();
+                }
+            } else if (etapaAtual === 6 || etapaAtual === 10) {
+                iniciarApuracaoVotos();
+            } else if (etapaAtual >= 7 && etapaAtual <= 9) {
+                const semanaSegundoTurno = etapaAtual - 1;
+                gerarEventosSemana(semanaSegundoTurno);
+                if (etapaAtual < 9) {
+                    etapaAtual++;
+                    document.getElementById('fase-tag').innerText = 'Campanha do 2º Turno';
+                    document.getElementById('fase-titulo').innerText = `2º turno: Semana ${etapaAtual - 6} de 3 — reta final da campanha`;
+                    document.getElementById('fase-desc').innerText = 'Os dois finalistas continuam em campanha. Comícios, debates e propostas podem alterar as intenções de voto antes da votação decisiva.';
+                    document.getElementById('btn-acao-principal').innerHTML = `<i class="fa-solid fa-bullhorn"></i> Simular Semana ${etapaAtual - 6} do 2º Turno`;
+                    atualizarInterface();
+                } else {
+                    etapaAtual = 10;
+                    prepararVotacao();
+                }
+            } else if (etapaAtual === 11) {
+                acaoMandatoSemanal();
+            }
+        }
+
+        window.onload = function() {
+            document.getElementById('tela-inicial').classList.remove('hidden');
+        };
+    </script>
+</body>
+</html>
